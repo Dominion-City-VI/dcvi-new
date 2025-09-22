@@ -232,12 +232,16 @@ class AuthStore {
     }
   }
 
-  *forgotPwd(_payload: TForgotPwd) {
+  *forgotPwd(_payload: TForgotPwd, cb?: () => void) {
     this.isLoading.forgotPwd = true;
     this.errors.forgotPwd = '';
     try {
       const data = (yield getForgotPwd(_payload)) as IDCVIServerRes<boolean>;
-      toast.success(data.message);
+
+      if(data.data){
+        toast.success("Password reset", 'An OTP has been sent to your inbox or spam');
+        cb?.();
+      }      
     } catch (error) {
       this.errors.forgotPwd = parseError(error);
       toast.error(this.errors.forgotPwd);

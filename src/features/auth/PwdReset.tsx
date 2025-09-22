@@ -35,7 +35,7 @@ export default function PwdReset({ className, ...props }: React.ComponentPropsWi
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Change Password</CardTitle>
+          <CardTitle className="text-2xl">Reset Password</CardTitle>
           <CardDescription>
             Enter your new password and the token sent to your mail.
           </CardDescription>

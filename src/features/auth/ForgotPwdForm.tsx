@@ -10,6 +10,8 @@ import InputField from '@/components/fields/InputField';
 import { useStore } from '@/store';
 import { Loader } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useNavigate } from '@tanstack/react-router';
+import { Route as FORGOTPASSWORD } from '@/routes/auth/password-reset';
 
 function ForgotPwdForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const {
@@ -21,9 +23,14 @@ function ForgotPwdForm({ className, ...props }: React.ComponentPropsWithoutRef<'
     reValidateMode: 'onSubmit'
   });
 
+  const navigate = useNavigate();
+
   function onSubmit(data: TForgotPwd) {
-    forgotPwd(data);
+    forgotPwd(data, ()=>{
+        navigate({to: FORGOTPASSWORD.fullPath+"?email="+data.emailAddress, replace: true});
+    });
   }
+
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card>
