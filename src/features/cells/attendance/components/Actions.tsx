@@ -21,7 +21,8 @@ export function DataTableRowActions({ row, weekDateRange }: DataTableRowActionsP
     AppConfigStore: { toggleModals }
   } = useStore();
 
-  const { memberId, cellAttenanceResponseVMs } = row.original;
+  // const { memberId, cellAttenanceResponseVMs } = row.original;
+  const { cellAttenanceResponseVMs } = row.original;
 
   // pick the right week's data
   const weekData = cellAttenanceResponseVMs.find((w) => w.dateRange === weekDateRange);

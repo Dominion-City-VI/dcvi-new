@@ -10,7 +10,7 @@ import { useStore } from '@/store';
 import { Funnel } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { periodText } from '@/constants/mangle';
+// import { periodText } from '@/constants/mangle';
 
 export const AttendanceFilterSchema = z.object({
   Search: z.string().optional(),

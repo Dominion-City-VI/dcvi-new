@@ -57,8 +57,11 @@ export default function MarkAttendanceModal() {
     AppConfigStore: { toggleModals, isOpen, attendance }
   } = useStore();
 
-  const { id, isAttendaceUpdate, tuesdayServiceDate, cellMeetingDate, sundayServiceDate } =
+  const { id, tuesdayServiceDate, cellMeetingDate, sundayServiceDate } =
     attendance;
+
+    // const { id, isAttendaceUpdate, tuesdayServiceDate, cellMeetingDate, sundayServiceDate } =
+    // attendance;
 
   const queryClient = useQueryClient();
 
