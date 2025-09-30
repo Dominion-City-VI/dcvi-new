@@ -10,7 +10,7 @@ import {
 import { sidebarData } from '@/components/layout/data/sidebar-data';
 import { Button } from '@/components/ui/button';
 import { ChevronDown } from 'lucide-react';
-import { gender, maritalStatus, userStatus } from '@/constants/data';
+import { gender, maritalStatus, statusMap, userStatus } from '@/constants/data';
 import { DataTableRowActions } from './Actions';
 
 export const columns: Array<ColumnDef<TAdminUserItem>> = [
@@ -208,7 +208,7 @@ export const columns: Array<ColumnDef<TAdminUserItem>> = [
     cell: ({ row }) => {
       return (
         <small className="text-muted-foreground">
-          {userStatus.find((el) => Number(el.value) === row.original.status)?.label ?? 'Unknown'}
+          {statusMap[String(row.original.status)] ?? 'N/A'}
           {/* {userStatus.filter((el) => row.original.status === Number(el.value))[0].label} */}
         </small>
       );

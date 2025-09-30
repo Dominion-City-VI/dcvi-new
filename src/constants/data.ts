@@ -53,6 +53,14 @@ export const userStatus: Array<Option> = [
   }
 ];
 
+export const statusMap: Record<string, string> = {
+  '0': 'Active',
+  '1': 'Pending',
+  '2': 'Deleted',
+  '3': 'Blocked',
+  '4': 'LockedOut'
+};
+
 export const trueOfFalse: Array<Option> = [
   {
     label: 'Yes',
