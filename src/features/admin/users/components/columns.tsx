@@ -208,7 +208,8 @@ export const columns: Array<ColumnDef<TAdminUserItem>> = [
     cell: ({ row }) => {
       return (
         <small className="text-muted-foreground">
-          {userStatus.filter((el) => row.original.status === Number(el.value))[0].label}
+          {userStatus.find((el) => Number(el.value) === row.original.status)?.label ?? 'Unknown'}
+          {/* {userStatus.filter((el) => row.original.status === Number(el.value))[0].label} */}
         </small>
       );
     }
