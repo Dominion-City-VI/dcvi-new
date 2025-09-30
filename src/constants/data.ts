@@ -33,23 +33,23 @@ export const gender: Array<Option> = [
 export const userStatus: Array<Option> = [
   {
     label: 'Active',
-    value: '1'
+    value: '0'
   },
   {
     label: 'Pending',
-    value: '2'
+    value: '1'
   },
   {
     label: 'Deleted',
-    value: '3'
+    value: '2'
   },
   {
     label: 'Blocked',
-    value: '4'
+    value: '3'
   },
   {
     label: 'LockedOut',
-    value: '5'
+    value: '4'
   }
 ];
 
