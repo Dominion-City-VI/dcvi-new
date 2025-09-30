@@ -133,23 +133,23 @@ export const sidebarData: SidebarData = {
         {
           title: 'Users',
           icon: Users,
-          rba: [EnumRoles.SUPER_ADMIN],
+          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN],
           url: usersRoute.fullPath
         },
         {
           title: 'Requests',
           icon: GitPullRequestArrow,
-          rba: [EnumRoles.SUPER_ADMIN],
+          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN],
           items: [
             {
               title: 'Access',
               url: accessRequestRoute.fullPath,
-              rba: [EnumRoles.SUPER_ADMIN]
+              rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN]
             },
             {
               title: 'Actions',
               url: actionRequestRoute.fullPath,
-              rba: [EnumRoles.SUPER_ADMIN]
+              rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN]
             }
           ]
         },
