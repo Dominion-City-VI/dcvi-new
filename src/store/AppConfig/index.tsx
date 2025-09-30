@@ -59,7 +59,9 @@ class AppConfigStore {
     fullName: '',
     emailAddress: '',
     roles: [99],
-    id: ''
+    id: '',
+    zoneId:'',
+    cellId:''
   };
 
   accessRequestModal = {
@@ -247,7 +249,21 @@ class AppConfigStore {
             fullName: modal.fullName,
             emailAddress: modal.emailAddress,
             roles: modal.roles,
-            id: modal.id
+            id: modal.id,            
+            zoneId: modal.zoneId,
+            cellId: modal.cellId
+          };
+        }
+        break;
+        case AppModals.REVOKE_ROLE_MODAL:
+        if (modal.open) {
+          this.updateRoleModal = {
+            fullName: modal.fullName,
+            emailAddress: modal.emailAddress,
+            roles: modal.roles,
+            id: modal.id,            
+            zoneId: '',
+            cellId: ''
           };
         }
         break;

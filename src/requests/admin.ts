@@ -1,5 +1,6 @@
 import { ADMIN } from '@/constants/api';
 import { TAccessRequestSchema } from '@/features/admin/requests/access/components/modal/AccessModal';
+import { TRevokeRoleSchema } from '@/features/admin/users/components/modals/RevokeRoleModal';
 import { TUpdateRoleSchema } from '@/features/admin/users/components/modals/UpdateRoleModal';
 import dcviServer from '@/servers/dcvi';
 
@@ -17,6 +18,14 @@ export const putRequest = async (payload: TAccessRequestSchema) =>
 
 export const putUpdateRole = async (payload: TUpdateRoleSchema) =>
   dcviServer.put<IDCVIServerRes<boolean>>(ADMIN.UPDATE_USER_ROLE, payload);
+
+// export const deleteRevokeRole = async (payload: TRevokeRoleSchema) =>
+//   dcviServer.deleteForm<IDCVIServerRes<boolean>>(ADMIN.REVOKE_USER_ROLE, payload);
+
+export const deleteRevokeRole = (payload: TRevokeRoleSchema) =>
+  dcviServer.delete<IDCVIServerRes<boolean>>(ADMIN.REVOKE_USER_ROLE, {
+    data: payload
+  });
 
 export const putMergeZone = async (payload: TAdminMergeReqs) =>
   dcviServer.put<IDCVIServerRes<boolean>>(ADMIN.MERGE_ZONE, payload);

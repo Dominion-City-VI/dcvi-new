@@ -21,6 +21,7 @@ export const ADMIN = {
   GRANT_ACCESS: '/admin/grant-requestor-access',
   REQUEST_APPROVE_REJECT: '/admin/request-approve-reject',
   UPDATE_USER_ROLE: '/admin/update-role',
+  REVOKE_USER_ROLE: '/admin/revoke-ad-access',
   MERGE_ZONE: '/admin/merge-zone',
   MERGE_CELL: '/admin/merge-cell'
 };

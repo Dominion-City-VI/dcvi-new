@@ -69,3 +69,6 @@ export function hasCommonRole(roles: Array<number>, array2: Array<number>) {
 
 export const otherRoles = (roles: Array<number>) =>
   sidebarData.roleSwitcher.filter((role) => !roles.includes(role.value));
+
+export const assignedRoles = (roles: Array<number>) =>
+  sidebarData.roleSwitcher.filter((role) => !roles.includes(role.value));

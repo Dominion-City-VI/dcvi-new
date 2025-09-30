@@ -14,12 +14,17 @@ import { Loader } from 'lucide-react';
 import { ADMIN } from '@/constants/api';
 import { otherRoles } from '@/utils';
 import { observer } from 'mobx-react-lite';
+import { useEffect, useState } from 'react';
+import { useFetchZones } from '@/hooks/zone/useFetchZone';
+import { useFetchCells } from '@/hooks/cell/useFetchCell';
 
 export const UpdateRoleSchema = z.object({
   emailAddress: z.string().email('Invalid email.'),
   role: z.string(),
   id: z.string(),
-  description: z.string()
+  description: z.string(),
+  cellId: z.string(),
+  zoneId: z.string(),
 });
 
 export type TUpdateRoleSchema = z.infer<typeof UpdateRoleSchema>;
@@ -31,13 +36,61 @@ function UpdateRoleModal() {
   } = useStore();
 
   const queryClient = useQueryClient();
+  const [zones, setZones] = useState<{ label: string; value: string }[]>([]);
+  const [cells, setCells] = useState<{ label: string; value: string }[]>([]);
 
   const form = useForm<TUpdateRoleSchema>({
-    defaultValues: { id: updateRoleModal.id, emailAddress: updateRoleModal.emailAddress },
+    defaultValues: { 
+      id: updateRoleModal.id, 
+      emailAddress: updateRoleModal.emailAddress,
+      zoneId: updateRoleModal.zoneId || '',
+      cellId: updateRoleModal.cellId || '',
+      description: '',
+      role: ''
+    },
     mode: 'onSubmit',
     resolver: zodResolver(UpdateRoleSchema),
     reValidateMode: 'onChange'
   });
+
+  const selectedRole = form.watch('role');
+  const selectedZone = form.watch('zoneId');
+
+  const { data: zoneData, status: zoneStatus } = useFetchZones({
+    take: '1.7976931348623157e%2B308'
+  });
+
+  const { data: cellData, status: cellStatus } = useFetchCells(
+    { ZoneId: selectedZone },
+    Boolean(selectedZone)
+  );
+
+  useEffect(() => {
+    if (zoneStatus === 'success' && zoneData !== undefined) {
+      const zoneArr = zoneData.items.map((item: { name: any; id: any; }) => ({ label: item.name, value: item.id }));
+      setZones(zoneArr);
+    }
+  }, [zoneData, zoneStatus]);
+
+  useEffect(() => {
+    if (cellStatus === 'success' && cellData !== undefined) {
+      const cellArr = cellData.items.map((item: { name: any; id: any; }) => ({ label: item.name, value: item.id }));
+      setCells(cellArr);
+    }
+  }, [cellData, cellStatus]);
+
+  useEffect(() => {
+    form.resetField('cellId');
+  }, [selectedZone, form]);
+
+  const isEmptyGuid = (id: string | null | undefined) => {
+    return !id || id === '00000000-0000-0000-0000-000000000000';
+  };
+
+  const needsZoneSelection = selectedRole === '4' && isEmptyGuid(updateRoleModal.zoneId);
+  const needsCellSelection = selectedRole === '5' && isEmptyGuid(updateRoleModal.cellId);
+  const showZoneField = needsZoneSelection || needsCellSelection;
+  const showCellField = needsCellSelection;
 
   const rolesByValAndLabel = () => {
     return otherRoles(updateRoleModal.roles).map((el) => ({
@@ -85,6 +138,45 @@ function UpdateRoleModal() {
                     />
                   )}
                 />
+                
+                {showZoneField && (
+                  <div className={showCellField ? "flex w-full items-start justify-between space-x-2" : ""}>
+                    <FormField
+                      control={form.control}
+                      name="zoneId"
+                      render={({ field }) => (
+                        <InputSelect
+                          {...field}
+                          label="Zone"
+                          items={zones}
+                          placeholder="Select zone..."
+                          defaultValue={field.value}
+                          onValueChange={field.onChange}
+                          required={needsZoneSelection || needsCellSelection}
+                        />
+                      )}
+                    />
+                    
+                    {showCellField && selectedZone && (
+                      <FormField
+                        control={form.control}
+                        name="cellId"
+                        render={({ field }) => (
+                          <InputSelect
+                            {...field}
+                            label="Cell"
+                            items={cells}
+                            placeholder="Select cell..."
+                            defaultValue={field.value}
+                            onValueChange={field.onChange}
+                            required={needsCellSelection}
+                          />
+                        )}
+                      />
+                    )}
+                  </div>
+                )}
+
                 <FormField
                   control={form.control}
                   name="description"

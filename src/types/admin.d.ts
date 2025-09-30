@@ -24,6 +24,8 @@ type TAdminUserItem = {
   maritalStatus: number;
   roles: Array<number>;
   userId: string;
+  zoneId: string;
+  cellId: string;
 };
 
 type TAdminAccessReqsItem = {

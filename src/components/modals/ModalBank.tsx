@@ -46,6 +46,9 @@ const ModalsMap = {
   [AppModals.UPDATE_ROLE_MODAL]: lazy(
     () => import('@/features/admin/users/components/modals/UpdateRoleModal')
   ),
+  [AppModals.REVOKE_ROLE_MODAL]: lazy(
+    () => import('@/features/admin/users/components/modals/RevokeRoleModal')
+  ),
   [AppModals.ACCESS_REQUEST_MODAL]: lazy(
     () => import('@/features/admin/requests/access/components/modal/AccessModal')
   ),

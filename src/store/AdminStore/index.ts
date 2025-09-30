@@ -1,14 +1,16 @@
-import { action, flow, makeObservable, observable } from 'mobx';
+import { action, flow, makeObservable, observable, runInAction } from 'mobx';
 import { RootStore } from '..';
 import initializer from '@/utils/initializer';
 import { TUpdateRoleSchema } from '@/features/admin/users/components/modals/UpdateRoleModal';
 import { useStyledToast } from '@/hooks/custom/useStyledToast';
 import { parseError } from '@/utils/errorHandler';
-import { putRequest, putUpdateRole, putMergeZone, putMergeCell, postGrantAccess } from '@/requests/admin';
+import { putRequest, putUpdateRole, putMergeZone, putMergeCell, postGrantAccess, deleteRevokeRole } from '@/requests/admin';
 import { TAccessRequestSchema } from '@/features/admin/requests/access/components/modal/AccessModal';
+import { TRevokeRoleSchema } from '@/features/admin/users/components/modals/RevokeRoleModal';
 
 const INIT_IS_LOADING = {
   updateRole: false,
+  revokeRole: false,
   approveRejectAccess: false,
   mergeRequest: false,
 
@@ -100,6 +102,41 @@ class AdminStore {
       toast.error(parseError(error));
     } finally {
       this.isLoading.updateRole = false;
+    }
+  }
+
+  // *revokeUserRole(payload: TRevokeRoleSchema, cb?: () => void) {
+  //   this.isLoading.revokeRole = true;
+  //   this.errors.revokeRole = '';
+  //   console.log("payload gotten", payload);
+  //   try {
+  //     yield deleteRevokeRole(payload);
+  //     toast.success('user role successfully revoked!');
+  //     cb?.();
+  //   } catch (error) {
+  //     toast.error(parseError(error));
+  //   } finally {
+  //     this.isLoading.revokeRole = false;
+  //   }
+  // }
+
+  async revokeUserRole(payload: TRevokeRoleSchema, cb?: () => void) {
+    // this.isLoading.revokeRole = true;
+    // this.errors.revokeRole = '';
+    try {
+      await deleteRevokeRole(payload);
+      runInAction(() => {
+        toast.success('user role successfully revoked!');
+      });
+      cb?.();
+    } catch (error) {
+      runInAction(() => {
+        toast.error(parseError(error));
+      });
+    } finally {
+      runInAction(() => {
+        // this.isLoading.revokeRole = false;
+      });
     }
   }
 

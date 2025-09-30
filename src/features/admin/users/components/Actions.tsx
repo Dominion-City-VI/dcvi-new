@@ -37,14 +37,29 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
               fullName: `${row.original.firstName} ${row.original.lastName}`,
               emailAddress: row.original.email,
               id: row.original.userId,
-              roles: row.original.roles
+              roles: row.original.roles,
+              zoneId: row.original.zoneId,
+              cellId: row.original.cellId
             })
           }
         >
           Update role
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-red-500">Revoke access</DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() =>
+              toggleModals({
+                name: AppModals.REVOKE_ROLE_MODAL,
+                open: true,
+                fullName: `${row.original.firstName} ${row.original.lastName}`,
+                emailAddress: row.original.email,
+                id: row.original.userId,
+                roles: row.original.roles
+              })
+            }
+          >
+          Revoke access
+          </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

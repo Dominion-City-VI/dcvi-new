@@ -16,6 +16,7 @@ export enum AppModals {
   REQUEST_ZONE_DELETE_MODAL = 'REQUEST_ZONE_DELETE_MODAL',
   IMPORT_MEMBER_MODAL = 'IMPORT_MEMBER_MODAL',
   UPDATE_ROLE_MODAL = 'UPDATE_ROLE_MODAL',
+  REVOKE_ROLE_MODAL = 'REVOKE_ROLE_MODAL',
   ACCESS_REQUEST_MODAL = 'ACCESS_REQUEST_MODAL',
   ADMIN_ACCESS_REQUEST_MODAL = 'ADMIN_ACCESS_REQUEST_MODAL',
   ACTION_REQUEST_MODAL = 'ACTION_REQUEST_MODAL',
@@ -102,6 +103,19 @@ export type TAppModalsAction =
       | { open?: false }
     ))
   | ({ name: AppModals.UPDATE_ROLE_MODAL } & (
+      | {
+          open: true;
+          fullName: string;
+          emailAddress: string;
+          roles: Array<number>;
+          id: string;
+          zoneId: string;
+          cellId: string;
+        }
+      | { open?: false }
+    ))
+  | 
+  ({ name: AppModals.REVOKE_ROLE_MODAL } & (
       | {
           open: true;
           fullName: string;
