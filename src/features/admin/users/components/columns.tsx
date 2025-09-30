@@ -10,7 +10,7 @@ import {
 import { sidebarData } from '@/components/layout/data/sidebar-data';
 import { Button } from '@/components/ui/button';
 import { ChevronDown } from 'lucide-react';
-import { gender, maritalStatus, statusMap, userStatus } from '@/constants/data';
+import { gender, maritalStatus, statusMap } from '@/constants/data';
 import { DataTableRowActions } from './Actions';
 
 export const columns: Array<ColumnDef<TAdminUserItem>> = [
