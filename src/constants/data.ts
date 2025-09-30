@@ -30,6 +30,29 @@ export const gender: Array<Option> = [
   }
 ];
 
+export const userStatus: Array<Option> = [
+  {
+    label: 'Active',
+    value: '1'
+  },
+  {
+    label: 'Pending',
+    value: '2'
+  },
+  {
+    label: 'Deleted',
+    value: '3'
+  },
+  {
+    label: 'Blocked',
+    value: '4'
+  },
+  {
+    label: 'LockedOut',
+    value: '5'
+  }
+];
+
 export const trueOfFalse: Array<Option> = [
   {
     label: 'Yes',

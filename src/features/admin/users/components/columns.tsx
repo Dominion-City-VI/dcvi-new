@@ -10,7 +10,7 @@ import {
 import { sidebarData } from '@/components/layout/data/sidebar-data';
 import { Button } from '@/components/ui/button';
 import { ChevronDown } from 'lucide-react';
-import { gender, maritalStatus } from '@/constants/data';
+import { gender, maritalStatus, userStatus } from '@/constants/data';
 import { DataTableRowActions } from './Actions';
 
 export const columns: Array<ColumnDef<TAdminUserItem>> = [
@@ -198,6 +198,18 @@ export const columns: Array<ColumnDef<TAdminUserItem>> = [
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+      );
+    }
+  },
+
+  {
+    accessorKey: 'status',
+    header: () => 'Status',
+    cell: ({ row }) => {
+      return (
+        <small className="text-muted-foreground">
+          {userStatus.filter((el) => row.original.status === Number(el.value))[0].label}
+        </small>
       );
     }
   },

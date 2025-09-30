@@ -26,6 +26,7 @@ type TAdminUserItem = {
   userId: string;
   zoneId: string;
   cellId: string;
+  status: number;
 };
 
 type TAdminAccessReqsItem = {
