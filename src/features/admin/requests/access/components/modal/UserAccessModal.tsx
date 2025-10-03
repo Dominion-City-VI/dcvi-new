@@ -7,6 +7,7 @@ import { Loader } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import InputMultiSelect from '@/components/fields/InputMultiSelect';
+import InputSelect from '@/components/fields/InputSelect';
 import {
   Form,
   FormControl,
@@ -21,14 +22,17 @@ import { useEffect, useState } from 'react';
 import { ADMIN } from '@/constants/api';
 import { z } from 'zod';
 import { useFetchRoles } from './useFetchRoles';
+// import { useFetchZones, useFetchCells } from '@/hooks/useFetchData';
 import { observer } from 'mobx-react-lite';
 import { postGrantAccess } from '@/requests/admin';
+import { useFetchZones } from '@/hooks/zone/useFetchZone';
+import { useFetchCells } from '@/hooks/cell/useFetchCell';
 
 export const AdminGrantAccessPayload = z.object({
   requestId: z.string({ required_error: 'Provide a request ID.' }),
   zoneId: z.string(),
   cellId: z.string(),
-  roles: z.array(z.number()).min(1, 'At least one role is required.'), // Back to number array for enums
+  roles: z.array(z.number()).min(1, 'At least one role is required.'),
   requestStatus: z.number().optional(),
 });
 
@@ -42,10 +46,13 @@ function UserAccessModal() {
 
   const queryClient = useQueryClient();
   const [rolesSelect, setRoles] = useState<Array<Option>>([]);
+  const [zones, setZones] = useState<{ label: string; value: string }[]>([]);
+  const [cells, setCells] = useState<{ label: string; value: string }[]>([]);
+  
   const { data: roleData, status: roleStatus } = useFetchRoles();
 
   const form = useForm<TAdminGrantAccessPayload>({
-    mode: 'onChange', // Changed from onSubmit to see validation in real-time
+    mode: 'onChange',
     defaultValues: {
       requestId: adminGrantAccessModal?.requestId || '',
       zoneId: adminGrantAccessModal?.zoneId || '',
@@ -55,9 +62,53 @@ function UserAccessModal() {
     resolver: zodResolver(AdminGrantAccessPayload),
   });
 
+  const selectedRoles = form.watch('roles');
+  const selectedZone = form.watch('zoneId');
+
+  // Fetch zones data
+  const { data: zoneData, status: zoneStatus } = useFetchZones({
+    take: '1.7976931348623157e%2B308'
+  });
+
+  // Fetch cells data based on selected zone
+  const { data: cellData, status: cellStatus } = useFetchCells(
+    { ZoneId: selectedZone },
+    Boolean(selectedZone)
+  );
+
+  // Populate zones dropdown
+  useEffect(() => {
+    if (zoneStatus === 'success' && zoneData !== undefined) {
+      const zoneArr = zoneData.items.map((item: { name: any; id: any; }) => ({ label: item.name, value: item.id }));
+      setZones(zoneArr);
+    }
+  }, [zoneData, zoneStatus]);
+
+  // Populate cells dropdown
+  useEffect(() => {
+    if (cellStatus === 'success' && cellData !== undefined) {
+      const cellArr = cellData.items.map((item: { name: any; id: any; }) => ({ label: item.name, value: item.id }));
+      setCells(cellArr);
+    }
+  }, [cellData, cellStatus]);
+
+  // Reset cell when zone changes
+  useEffect(() => {
+    form.resetField('cellId');
+  }, [selectedZone, form]);
+
+  // Check if zone/cell selection is needed based on roles
+  const isEmptyGuid = (id: string | null | undefined) => {
+    return !id || id === '00000000-0000-0000-0000-000000000000';
+  };
+
+  const needsZoneSelection = selectedRoles.includes(4) && isEmptyGuid(adminGrantAccessModal?.zoneId);
+  const needsCellSelection = selectedRoles.includes(5) && isEmptyGuid(adminGrantAccessModal?.cellId);
+  const showZoneField = needsZoneSelection || needsCellSelection;
+  const showCellField = needsCellSelection;
+
   useEffect(() => {
     if (roleStatus === 'success' && roleData !== undefined) {
-      // Create explicit mapping based on your RolesEnum
       const roleToEnumMap: Record<string, number> = {
         'SeniorPastor': 1,
         'Pastor': 2,
@@ -73,8 +124,8 @@ function UserAccessModal() {
 
       const options = roleData.map((role) => ({
         label: role,
-        value: roleToEnumMap[role]?.toString() || '0' // Use explicit enum values
-      })).filter(option => option.value !== '0'); // Filter out unmapped roles
+        value: roleToEnumMap[role]?.toString() || '0'
+      })).filter(option => option.value !== '0');
       
       setRoles(options);
     }
@@ -152,26 +203,69 @@ function UserAccessModal() {
                       <FormLabel>Roles</FormLabel>
                       <FormControl>
                         <InputMultiSelect
-                        label={''} {...field}
-                        value={
-                            value?.map(numericValue => rolesSelect.find(option => parseInt(option.value, 10) === numericValue)
-                            ).filter((option): option is Option => option !== undefined) || []}
+                          label={''} 
+                          {...field}
+                          value={
+                            value?.map(numericValue => 
+                              rolesSelect.find(option => parseInt(option.value, 10) === numericValue)
+                            ).filter((option): option is Option => option !== undefined) || []
+                          }
                           onChange={(selectedOptions: Option[]) => {
                             const numericValues = selectedOptions.map(option => parseInt(option.value, 10));
                             onChange(numericValues);
-                          } 
-                        }
-                        isLoading={roleStatus === 'pending'}
-                        options={rolesSelect}
-                        placeholder="Select Roles..."
-                        emptyIndicator={<p className="text-center text-lg leading-10 text-gray-600 dark:text-gray-400">
-                          No roles available.
-                        </p>}                        />
+                          }}
+                          isLoading={roleStatus === 'pending'}
+                          options={rolesSelect}
+                          placeholder="Select Roles..."
+                          emptyIndicator={
+                            <p className="text-center text-lg leading-10 text-gray-600 dark:text-gray-400">
+                              No roles available.
+                            </p>
+                          }                        
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {showZoneField && (
+                  <div className={showCellField ? "flex w-full items-start justify-between space-x-2" : ""}>
+                    <FormField
+                      control={form.control}
+                      name="zoneId"
+                      render={({ field }) => (
+                        <InputSelect
+                          {...field}
+                          label="Zone"
+                          items={zones}
+                          placeholder="Select zone..."
+                          defaultValue={field.value}
+                          onValueChange={field.onChange}
+                          required={needsZoneSelection || needsCellSelection}
+                        />
+                      )}
+                    />
+                    
+                    {showCellField && selectedZone && (
+                      <FormField
+                        control={form.control}
+                        name="cellId"
+                        render={({ field }) => (
+                          <InputSelect
+                            {...field}
+                            label="Cell"
+                            items={cells}
+                            placeholder="Select cell..."
+                            defaultValue={field.value}
+                            onValueChange={field.onChange}
+                            required={needsCellSelection}
+                          />
+                        )}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             </fieldset>
           </form>

@@ -73,8 +73,8 @@ export default function ImportMemberModal() {
 
   function downloadSampleExcel() {
     const a = document.createElement('a');
-    a.href = '/dcvi-member-form.xlsx';
-    a.download = 'member-form.xlsx';
+    a.href = '/User-Sample-Data.xlsx';
+    a.download = 'User-Sample-Data.xlsx';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

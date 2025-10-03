@@ -24,6 +24,7 @@ export const postUploadMember = (payload: TOnboardMemberSchema) =>
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/no-explicit-any
 export const postMarkAttendance = (payload: any) => {
+  console.log("Attendance to be marked", payload);
   const newPayload = { ...payload };
 
   newPayload.tuesdayService.attendanceStatus = parseInt(payload.tuesdayService.attendanceStatus);
