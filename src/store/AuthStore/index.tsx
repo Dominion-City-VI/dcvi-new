@@ -80,7 +80,7 @@ class AuthStore {
       personalInfo: observable,
       requestForm: observable,
 
-      updateActiveRole: action.bound,
+      updateActiveRole: flow.bound,
       reset: action.bound,
       resetStores: action.bound,
       setTokens: action.bound,
@@ -98,9 +98,31 @@ class AuthStore {
     });
   }
 
-  updateActiveRole(role: number, cb?: () => void) {
+  // updateActiveRole(role: number, cb?: () => void) {
+  //   this.activeRole = persist(Mangle.USER_ACTIVE_ROLE, role);
+  //   cb?.();
+  // }
+
+  *updateActiveRole(role: number, cb?: () => void) {
     this.activeRole = persist(Mangle.USER_ACTIVE_ROLE, role);
-    cb?.();
+    
+    try {
+      // Fetch updated profile with new role context
+      const result = (yield getProfile()) as AxiosResponse<IDCVIServerRes<TLoginRes>>;
+      
+      if (result.data.status) {
+        this.user = persist(Mangle.USER, result.data.data);
+        // If the API returns updated extraInfo for the new role, update it
+        if (result.data.data.extraInfo) {
+          this.userExtraInfo = persist(Mangle.USER_EXTRA_INFO, result.data.data.extraInfo);
+        }
+      }
+    
+      cb?.();
+    } catch (error) {
+      toast.error('Failed to switch role');
+      console.error(error);
+    }
   }
 
   reset() {

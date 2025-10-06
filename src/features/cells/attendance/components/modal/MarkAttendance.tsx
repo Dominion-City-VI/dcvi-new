@@ -281,10 +281,10 @@ export default function MarkAttendanceModal() {
   const { id, tuesdayServiceDate, cellMeetingDate, sundayServiceDate } = attendance;
 
   const queryClient = useQueryClient();
-
+  console.log("User extra info", userExtraInfo)
   const form = useForm<TMarkAttendanceSchema>({
     defaultValues: {
-      id: userExtraInfo.cellId || '',
+      id: userExtraInfo.cellId,
       memberId: id || '',
       tuesdayServiceDate: tuesdayServiceDate ?? '',
       cellMeetingDate: cellMeetingDate ?? '',
