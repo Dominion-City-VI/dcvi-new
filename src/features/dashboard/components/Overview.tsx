@@ -83,7 +83,7 @@ import {
   ChartTooltip,
   ChartTooltipContent
 } from '@/components/ui/chart';
-import { PieChartOverview } from './Analytical';
+// import { PieChartOverview } from './Analytical';
 
 const chartConfig = {
   cellCount: {
