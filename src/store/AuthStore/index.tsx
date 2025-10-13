@@ -272,23 +272,38 @@ class AuthStore {
     }
   }
 
-  *resetPwd(_payload: TPwdResetSchema, cb?: () => void) {
-    this.isLoading.reset = true;
-    this.errors.reset = '';
-    try {
-      const { emailAddress, newPassword, otp } = _payload;
-      const data = (yield postPwdReset({ emailAddress, newPassword, otp })) as { data: TLoginRes };
+  // *resetPwd(_payload: TPwdResetSchema, cb?: () => void) {
+  //   this.isLoading.reset = true;
+  //   this.errors.reset = '';
+  //   try {
+  //     const { emailAddress, newPassword, otp } = _payload;
+  //     const data = (yield postPwdReset({ emailAddress, newPassword, otp })) as { data: TLoginRes };
 
-      if (data.data.isEmailVerified) {
-        toast.success('Password has been reset!');
-        cb?.();
-      }
-    } catch (error) {
-      this.errors.reset = parseError(error);
-    } finally {
-      this.isLoading.reset = false;
-    }
+  //     if (data.data.isEmailVerified) {
+  //       toast.success('Password has been reset!');
+  //       cb?.();
+  //     }
+  //   } catch (error) {
+  //     this.errors.reset = parseError(error);
+  //   } finally {
+  //     this.isLoading.reset = false;
+  //   }
+  // }
+
+*resetPwd(_payload: TPwdResetSchema) {
+  this.isLoading.reset = true;
+  this.errors.reset = '';
+  try {
+    const { emailAddress, newPassword, otp } = _payload;
+    const data = (yield postPwdReset({ emailAddress, newPassword, otp })) as { data: TLoginRes };
+    return data.data;
+  } catch (error) {
+    this.errors.reset = parseError(error);
+    throw error;
+  } finally {
+    this.isLoading.reset = false;
   }
+}
 
   *verify(_query: TVerifyEmailSearchSchema) {
     this.isLoading.verify = true;
