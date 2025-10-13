@@ -55,9 +55,9 @@ function AdminDB() {
   );
 
   useEffect(() => {
-    if (!isLoading && data != undefined) {
+    if (!isLoading && data?.performanceInPercentage) {
       setPerformance(data.performanceInPercentage);
-      setPeriodicAnalysis(data.periodicAnalysisDatapoint);
+      setPeriodicAnalysis(data.periodicAnalysisDatapoint || []);
     }
   }, [data, isLoading]);
 
@@ -84,15 +84,16 @@ function AdminDB() {
               return <Skeleton key={item.tag} className="h-[125px] rounded-xl" />;
             })
           : performanceArray.map((item) => {
+              const value = performance?.[item.tag] ?? 0;
               return (
                 <Card key={item.tag}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">{item.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{performance[item.tag]}</div>
+                    <div className="text-2xl font-bold">{value}</div>
                     <p className="text-muted-foreground text-xs">
-                      ({performance[item.tag]})% change
+                      ({value})% change
                     </p>
                   </CardContent>
                 </Card>
