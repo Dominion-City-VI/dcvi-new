@@ -4,7 +4,13 @@ import {
   ActionRequestTypes,
   ACTION_REQUEST_STATUS,
   EnumActionRequestStatus,
-  ActionRequestStatus
+  ActionRequestStatus,
+  EnumCellType,
+  CellType,
+  CELL_TYPE,
+  CellHoldingDayOfTheWeekEnum,
+  CELL_HOLDING_DAY,
+  CellHoldingDayOfTheWeek
 } from '@/constants/mangle';
 
 export function getActionReqTypeByEnum(
@@ -25,4 +31,24 @@ export function getActionReqStatusByEnum(
 
 export function getActionReqStatusText(enumValue: EnumActionRequestStatus): string {
   return getActionReqStatusByEnum(enumValue)?.text ?? '';
+}
+
+export function getCelltypeByEnum(
+  enumValue: EnumCellType
+): CellType | undefined {
+  return Object.values(CELL_TYPE).find((req) => req.enum === enumValue);
+}
+
+export function getCellTypeText(enumValue: EnumCellType): string {
+  return getCelltypeByEnum(enumValue)?.text ?? '';
+}
+
+export function getCellHoldingByEnum(
+  enumValue: CellHoldingDayOfTheWeekEnum
+): CellHoldingDayOfTheWeek | undefined {
+  return Object.values(CELL_HOLDING_DAY).find((req) => req.enum === enumValue);
+}
+
+export function getCellHoldingDayText(enumValue: CellHoldingDayOfTheWeekEnum): string {
+  return getCellHoldingByEnum(enumValue)?.text ?? '';
 }

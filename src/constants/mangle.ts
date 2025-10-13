@@ -374,7 +374,78 @@ export const ACTION_REQUEST_STATUS: Record<string, ActionRequestStatus> = {
 
 // cell type
 export enum EnumCellType {
-  ALL = 0,
   CONVENTIONAL = 1,
   PROFESSIONAL = 2
 }
+
+export type CellType = IEnumStatus<EnumCellType>;
+export const CELL_TYPE: Record<string, CellType> = {
+  CONVENTIONAL: {
+    enum: EnumCellType.CONVENTIONAL,
+    name: 'CONVENTIONAL',
+    text: 'Conventional'
+  },
+  PROFESSIONAL: {
+    enum: EnumCellType.PROFESSIONAL,
+    name: 'PROFESSIONAL',
+    text: 'Professional'
+  }
+};
+
+export enum CellHoldingDayOfTheWeekEnum
+{
+    None,
+    Sunday = 1,
+    Monday = 2,
+    Tuesday = 3,
+    Wednesday = 4,
+    Thursday = 5,
+    Friday = 6,
+    Saturday = 7
+}
+
+export type CellHoldingDayOfTheWeek = IEnumStatus<CellHoldingDayOfTheWeekEnum>;
+
+export const CELL_HOLDING_DAY: Record<string, CellHoldingDayOfTheWeek> = {
+  NONE: {
+    enum: CellHoldingDayOfTheWeekEnum.None,
+    name: 'None',
+    text: 'None'
+  },
+  MONDAY: {
+    enum: CellHoldingDayOfTheWeekEnum.Monday,
+    name: 'MONDAY',
+    text: 'Monday'
+  },
+  TUESDAY: {
+    enum: CellHoldingDayOfTheWeekEnum.Tuesday,
+    name: 'TUESDAY',
+    text: 'Tuesday'
+  },
+  WEDNESDAY: {
+    enum: CellHoldingDayOfTheWeekEnum.Wednesday,
+    name: 'WEDNESDAY',
+    text: 'Wednesday'
+  },
+  THURSDAY: {
+    enum: CellHoldingDayOfTheWeekEnum.Thursday,
+    name: 'THURSDAY',
+    text: 'Thursday'
+  },
+  FRIDAY: {
+    enum: CellHoldingDayOfTheWeekEnum.Friday,
+    name: 'FRIDAY',
+    text: 'Friday'
+  },
+  SATURDAY: {
+    enum: CellHoldingDayOfTheWeekEnum.Saturday,
+    name: 'SATURDAY',
+    text: 'Saturday'
+  },
+  SUNDAY: {
+    enum: CellHoldingDayOfTheWeekEnum.Sunday,
+    name: 'SUNDAY',
+    text: 'Sunday'
+  }
+};
+

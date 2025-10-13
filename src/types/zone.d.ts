@@ -136,6 +136,14 @@ type TCell = {
   cellLeaderPhoneNumber: string;
   cellName: string;
   cellId: string;
+  holdingDayOfWeek :number;
+  cellStatus: number;
+  cellType : number;
+  holdingTime: string;
+  isVirtual: boolean;
+  meetingAddress: string;
+  meetingLink: string;
+  statusReason: number;
 };
 
 type TSingleZoneRes = BaseEntity & {

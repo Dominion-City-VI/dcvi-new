@@ -1,4 +1,4 @@
-import { EnumActionRequestStatus, EnumActionRequestType } from '@/constants/mangle';
+import { EnumActionRequestStatus, EnumActionRequestType, EnumCellType } from '@/constants/mangle';
 
 export const actionRequestTypes = new Map<EnumActionRequestType, string>([
   [
@@ -39,4 +39,16 @@ export const actionRequestStatus = new Map<EnumActionRequestStatus, string>([
   ],
 
   [EnumActionRequestStatus.REJECTED, 'bg-red-100/40 text-red-800 dark:text-red-200 border-red-300']
+]);
+
+export const cellTypeFormat = new Map<EnumCellType, string>([
+  [
+    EnumCellType.PROFESSIONAL,
+    'bg-green-100/40 text-green-800 dark:text-green-200 border-green-300'
+  ],
+
+  [
+    EnumCellType.CONVENTIONAL,
+    'bg-orange-100/40 text-orange-800 dark:text-orange-200 border-orange-300'
+  ]
 ]);

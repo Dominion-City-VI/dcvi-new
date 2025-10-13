@@ -14,7 +14,13 @@ export const NewCellSchema = z.object({
   zonalId: z.string({ required_error: 'Zone Id is required' }),
   cellName: z.string({ required_error: 'Cell name is required' }),
   cellType: z.string(),
-  statusReason: z.string()
+  statusReason: z.string(),
+  holdingDayOfWeek: z.enum(['none', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']),
+  holdingTime: z.string(),
+  holdingDay: z.date(),
+  isVirtual: z.boolean(),
+  meetingLink: z.string(),
+  meetingAddress: z.string()
 });
 
 export type TNewZoneSchema = z.infer<typeof NewZoneSchema>;
