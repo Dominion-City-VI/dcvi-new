@@ -3,7 +3,7 @@ import { RootStore } from '..';
 
 class WalletStore {
   rootStore: RootStore;
-  transQuery = { Limit: 10, Page: 1 };
+  transQuery = { Limit: null as number | null, Page: 1 };
 
   constructor(_rootStore: RootStore) {
     makeObservable(this, {

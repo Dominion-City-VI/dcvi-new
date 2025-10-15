@@ -1,3 +1,197 @@
+// import { action, flow, makeObservable, observable, runInAction } from 'mobx';
+// import { RootStore } from '..';
+// import initializer from '@/utils/initializer';
+// import { TUpdateRoleSchema } from '@/features/admin/users/components/modals/UpdateRoleModal';
+// import { useStyledToast } from '@/hooks/custom/useStyledToast';
+// import { parseError } from '@/utils/errorHandler';
+// import { putRequest, putUpdateRole, putMergeZone, putMergeCell, postGrantAccess, deleteRevokeRole } from '@/requests/admin';
+// import { TAccessRequestSchema } from '@/features/admin/requests/access/components/modal/AccessModal';
+// import { TRevokeRoleSchema } from '@/features/admin/users/components/modals/RevokeRoleModal';
+
+// const INIT_IS_LOADING = {
+//   updateRole: false,
+//   revokeRole: false,
+//   approveRejectAccess: false,
+//   mergeRequest: false,
+
+//   deleteZone: false,
+//   deleteCell: false,
+//   deleteMember: false,
+// };
+
+// // eslint-disable-next-line react-hooks/rules-of-hooks
+// const toast = useStyledToast();
+
+// class AdminStore {
+//   rootStore: RootStore;
+//   usersQuery = { Limit: null as number | null, Page: 1 };
+//   zoneQuery = { Limit: null as number | null, Page: 1 };
+//   adminZoneAttendanceQuery: Partial<TAdminZonalAttendanceQuery> = {};
+//   isLoading = { ...INIT_IS_LOADING };
+//   errors = initializer(this.isLoading, '');
+
+//   constructor(_rootStore: RootStore) {
+//     makeObservable(this, {
+//       usersQuery: observable,
+//       zoneQuery: observable,
+//       adminZoneAttendanceQuery: observable,
+//       isLoading: observable,
+//       errors: observable,
+
+//       setLimit: action.bound,
+//       setPage: action.bound,
+
+//       updateUserRole: flow.bound,
+//       approveRejectAccess: flow.bound,
+//       mergeRequest: flow.bound,
+
+      
+//       applyAttendanceFilter: action.bound,
+//       resetAttendanceFilter: action.bound,
+//     });
+//     this.rootStore = _rootStore;
+//   }
+
+//    applyAttendanceFilter(_filter: Partial<TAdminZonalAttendanceQuery>) {
+//     if (_filter.StartAt) {
+//       _filter.StartAt = new Date(_filter.StartAt).toISOString();
+//     }
+
+//     if (_filter.EndAt) {
+//       _filter.EndAt = new Date(_filter.EndAt).toISOString();
+//     }
+
+//     this.adminZoneAttendanceQuery = _filter;
+//   }
+
+//   resetAttendanceFilter() {
+//     this.adminZoneAttendanceQuery = {};
+//   }
+
+//   hasFilter(filter: Partial<TAdminZonalAttendanceQuery>) {
+//     return Object.entries(filter).some(
+//       ([, value]) => value !== undefined && value !== null && value !== ''
+//     );
+//   }
+
+//   setLimit(limit: number) {
+//     this.usersQuery.Limit = limit;
+//   }
+
+//   setPage(page: number) {
+//     this.usersQuery.Page = page;
+//   }
+
+//   setZoneLimit(limit: number) {
+//     this.zoneQuery.Limit = limit;
+//   }
+
+//   setZonePage(page: number) {
+//     this.zoneQuery.Page = page;
+//   }
+
+//   *updateUserRole(payload: TUpdateRoleSchema, cb?: () => void) {
+//     this.isLoading.updateRole = true;
+//     this.errors.updateRole = '';
+
+//     try {
+//       yield putUpdateRole(payload);
+//       toast.success('user role updated!');
+//       cb?.();
+//     } catch (error) {
+//       toast.error(parseError(error));
+//     } finally {
+//       this.isLoading.updateRole = false;
+//     }
+//   }
+
+//   // *revokeUserRole(payload: TRevokeRoleSchema, cb?: () => void) {
+//   //   this.isLoading.revokeRole = true;
+//   //   this.errors.revokeRole = '';
+//   //   console.log("payload gotten", payload);
+//   //   try {
+//   //     yield deleteRevokeRole(payload);
+//   //     toast.success('user role successfully revoked!');
+//   //     cb?.();
+//   //   } catch (error) {
+//   //     toast.error(parseError(error));
+//   //   } finally {
+//   //     this.isLoading.revokeRole = false;
+//   //   }
+//   // }
+
+//   async revokeUserRole(payload: TRevokeRoleSchema, cb?: () => void) {
+//     // this.isLoading.revokeRole = true;
+//     // this.errors.revokeRole = '';
+//     try {
+//       await deleteRevokeRole(payload);
+//       runInAction(() => {
+//         toast.success('user role successfully revoked!');
+//       });
+//       cb?.();
+//     } catch (error) {
+//       runInAction(() => {
+//         toast.error(parseError(error));
+//       });
+//     } finally {
+//       runInAction(() => {
+//         // this.isLoading.revokeRole = false;
+//       });
+//     }
+//   }
+
+//   async grantUserAccess(payload: TAdminGrantAccessPayload, cb?: () => void) {
+//     this.isLoading.approveRejectAccess = true;
+//     this.errors.approveRejectAccess = ''; // Reset any previous errors
+
+//     try {
+//       // Now using async/await instead of yield
+//       await postGrantAccess(payload); // Assuming postGrantAccess is a Promise-returning function
+//       cb?.(); // Call the callback if provided
+//     } catch (error) {
+//       toast.error(parseError(error)); // Handle errors appropriately
+//     } finally {
+//       this.isLoading.approveRejectAccess = false; // Reset loading state
+//     }
+//   }
+
+//   *approveRejectAccess(payload: TAccessRequestSchema, cb?: () => void) {
+//     this.isLoading.approveRejectAccess = true;
+//     this.errors.approveRejectAccess = '';
+
+//     try {
+//       yield putRequest(payload);
+//       cb?.();
+//     } catch (error) {
+//       toast.error(parseError(error));
+//     } finally {
+//       this.isLoading.approveRejectAccess = false;
+//     }
+//   }
+
+//   *mergeRequest(payload: TAdminMergeReqs, type: string, cb?: () => void) {
+//     this.isLoading.mergeRequest = true;
+//     this.errors.mergeRequest = '';
+
+//     try {
+//       if (type === 'zone') {
+//         yield putMergeZone(payload);
+//       } else {
+//         yield putMergeCell(payload);
+//       }
+
+//       cb?.();
+//     } catch (error) {
+//       toast.error(parseError(error));
+//     } finally {
+//       this.isLoading.mergeRequest = false;
+//     }
+//   }
+// }
+
+// export default AdminStore;
+
+
 import { action, flow, makeObservable, observable, runInAction } from 'mobx';
 import { RootStore } from '..';
 import initializer from '@/utils/initializer';
@@ -24,8 +218,8 @@ const toast = useStyledToast();
 
 class AdminStore {
   rootStore: RootStore;
-  usersQuery = { Limit: 10, Page: 1 };
-  zoneQuery = { Limit: 10, Page: 1 };
+  usersQuery = { Limit: null as number | null, Page: 1 };
+  zoneQuery = { Limit: null as number | null, Page: 1 };
   adminZoneAttendanceQuery: Partial<TAdminZonalAttendanceQuery> = {};
   isLoading = { ...INIT_IS_LOADING };
   errors = initializer(this.isLoading, '');
@@ -40,19 +234,22 @@ class AdminStore {
 
       setLimit: action.bound,
       setPage: action.bound,
+      setZoneLimit: action.bound,      // Add this
+      setZonePage: action.bound,        // Add this
 
       updateUserRole: flow.bound,
       approveRejectAccess: flow.bound,
       mergeRequest: flow.bound,
+      revokeUserRole: action.bound,     // Add this since it's async
+      grantUserAccess: action.bound,    // Add this since it's async
 
-      
       applyAttendanceFilter: action.bound,
       resetAttendanceFilter: action.bound,
     });
     this.rootStore = _rootStore;
   }
 
-   applyAttendanceFilter(_filter: Partial<TAdminZonalAttendanceQuery>) {
+  applyAttendanceFilter(_filter: Partial<TAdminZonalAttendanceQuery>) {
     if (_filter.StartAt) {
       _filter.StartAt = new Date(_filter.StartAt).toISOString();
     }
@@ -83,12 +280,19 @@ class AdminStore {
   }
 
   setZoneLimit(limit: number) {
-    this.zoneQuery.Limit = limit;
-  }
+  console.log('setZoneLimit called with:', limit);
+  console.log('Current zoneQuery before:', JSON.stringify(this.zoneQuery));
+  this.zoneQuery.Limit = limit;
+  this.zoneQuery.Page = 1; // Reset to page 1 when changing limit
+  console.log('Current zoneQuery after:', JSON.stringify(this.zoneQuery));
+}
 
   setZonePage(page: number) {
-    this.zoneQuery.Page = page;
-  }
+  console.log('setZonePage called with:', page);
+  console.log('Current zoneQuery before:', JSON.stringify(this.zoneQuery));
+  this.zoneQuery.Page = page;
+  console.log('Current zoneQuery after:', JSON.stringify(this.zoneQuery));
+}
 
   *updateUserRole(payload: TUpdateRoleSchema, cb?: () => void) {
     this.isLoading.updateRole = true;
@@ -105,53 +309,39 @@ class AdminStore {
     }
   }
 
-  // *revokeUserRole(payload: TRevokeRoleSchema, cb?: () => void) {
-  //   this.isLoading.revokeRole = true;
-  //   this.errors.revokeRole = '';
-  //   console.log("payload gotten", payload);
-  //   try {
-  //     yield deleteRevokeRole(payload);
-  //     toast.success('user role successfully revoked!');
-  //     cb?.();
-  //   } catch (error) {
-  //     toast.error(parseError(error));
-  //   } finally {
-  //     this.isLoading.revokeRole = false;
-  //   }
-  // }
-
   async revokeUserRole(payload: TRevokeRoleSchema, cb?: () => void) {
-    // this.isLoading.revokeRole = true;
-    // this.errors.revokeRole = '';
+    this.isLoading.revokeRole = true;
+    this.errors.revokeRole = '';
     try {
       await deleteRevokeRole(payload);
       runInAction(() => {
         toast.success('user role successfully revoked!');
+        this.isLoading.revokeRole = false;
       });
       cb?.();
     } catch (error) {
       runInAction(() => {
         toast.error(parseError(error));
-      });
-    } finally {
-      runInAction(() => {
-        // this.isLoading.revokeRole = false;
+        this.isLoading.revokeRole = false;
       });
     }
   }
 
   async grantUserAccess(payload: TAdminGrantAccessPayload, cb?: () => void) {
     this.isLoading.approveRejectAccess = true;
-    this.errors.approveRejectAccess = ''; // Reset any previous errors
+    this.errors.approveRejectAccess = '';
 
     try {
-      // Now using async/await instead of yield
-      await postGrantAccess(payload); // Assuming postGrantAccess is a Promise-returning function
-      cb?.(); // Call the callback if provided
+      await postGrantAccess(payload);
+      runInAction(() => {
+        this.isLoading.approveRejectAccess = false;
+      });
+      cb?.();
     } catch (error) {
-      toast.error(parseError(error)); // Handle errors appropriately
-    } finally {
-      this.isLoading.approveRejectAccess = false; // Reset loading state
+      runInAction(() => {
+        toast.error(parseError(error));
+        this.isLoading.approveRejectAccess = false;
+      });
     }
   }
 

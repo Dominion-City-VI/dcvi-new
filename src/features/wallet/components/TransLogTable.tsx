@@ -21,11 +21,10 @@ import {
   TableRow
 } from '@/components/ui/table';
 import { columns } from './columns';
-import { useStore } from '@/store';
-import { ServerPagination } from '@/components/ServerPagination';
 import { ccyFormatter } from '@/utils/wallet';
 import { Button } from '@/components/ui/button';
 import { DataTableToolbar } from './DatatableToolbar';
+import { ClientPagination } from '@/components/ClientPagination';
 
 interface DataTableProps {
   data: TTransactionLogRes;
@@ -38,17 +37,17 @@ export function TransLogTable({ data, placeholder }: DataTableProps) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
 
-  const {
-    WalletStore: { setLimit, transQuery, setPage }
-  } = useStore();
-  const pagination: TPaginatedRes = {
-    currentPage: data.transactions.currentPage,
-    totalItems: data.transactions.totalItems,
-    totalPages: data.transactions.totalPages,
-    pathUrl: data.transactions.pathUrl,
-    previousPageUrl: data.transactions.previousPageUrl,
-    nextPageUrl: data.transactions.nextPageUrl
-  };
+  // const {
+  //   WalletStore: { setLimit, transQuery, setPage }
+  // } = useStore();
+  // const pagination: TPaginatedRes = {
+  //   currentPage: data.transactions.currentPage,
+  //   totalItems: data.transactions.totalItems,
+  //   totalPages: data.transactions.totalPages,
+  //   pathUrl: data.transactions.pathUrl,
+  //   previousPageUrl: data.transactions.previousPageUrl,
+  //   nextPageUrl: data.transactions.nextPageUrl
+  // };
 
   const table = useReactTable({
     data: data.transactions.items,
@@ -72,13 +71,13 @@ export function TransLogTable({ data, placeholder }: DataTableProps) {
     getFacetedUniqueValues: getFacetedUniqueValues(),
     initialState: {
       pagination: {
-        pageSize: transQuery.Limit
+        pageSize: 10
       }
     }
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-30 md:pb-20">
       <div>
         <span>Balance: </span>
         <Button variant="secondary" className="text-xl text-indigo-700">
@@ -125,7 +124,8 @@ export function TransLogTable({ data, placeholder }: DataTableProps) {
           </TableBody>
         </Table>
       </div>
-      <ServerPagination {...{ pagination, setLimit, setPage, Limit: transQuery.Limit }} />
+      {/* <ServerPagination {...{ pagination, setLimit, setPage, Limit: transQuery.Limit }} /> */}
+          <ClientPagination table={table} />
     </div>
   );
 }

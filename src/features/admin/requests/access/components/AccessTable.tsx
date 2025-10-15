@@ -76,7 +76,7 @@ export function AccessReqsTable({ data, placeholder }: DataTableProps) {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-30 md:pb-20">
       <DataTableToolbar {...{ placeholder, table }} />
       <div className="rounded-md border">
         <Table>

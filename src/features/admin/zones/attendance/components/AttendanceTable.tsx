@@ -83,7 +83,7 @@ const AttendanceTable = ({ zonalAttendance }: DataTableProps) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-30 md:pb-20">
       <div className="rounded-md border">
         <div className="flex">
           <div className="flex-shrink-0 border-r">

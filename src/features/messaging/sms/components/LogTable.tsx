@@ -75,7 +75,7 @@ export function LogTable({ data }: DataTableProps) {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-30 md:pb-20">
       <div className="rounded-md border">
         <Table>
           <TableHeader>
