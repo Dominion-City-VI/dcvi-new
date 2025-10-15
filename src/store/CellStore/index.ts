@@ -17,20 +17,16 @@ class CellStore {
   attendanceQuery: Partial<TCellAttendanceQuery> = {};
   isLoading = { ...INIT_IS_LOADING };
   errors = initializer(this.isLoading, '');
-  cellQuery = { Limit: null as number | null, Page: 1 };
 
   constructor(_rootStore: RootStore) {
     makeObservable(this, {
       attendanceQuery: observable,
       isLoading: observable,
       errors: observable,
-      cellQuery: observable,
 
       applyAttendanceFilter: action.bound,
       resetAttendanceFilter: action.bound,
-      hasFilter: action.bound,
-      setLimit: action.bound,
-      setPage: action.bound
+      hasFilter: action.bound
     });
     this.rootStore = _rootStore;
   }
@@ -83,14 +79,6 @@ class CellStore {
     } finally {
       this.isLoading.delCell = false;
     }
-  }
-
-  setLimit(limit: number) {
-    this.cellQuery.Limit = limit;
-  }
-
-  setPage(page: number) {
-    this.cellQuery.Page = page;
   }
 }
 

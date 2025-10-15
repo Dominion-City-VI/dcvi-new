@@ -21,8 +21,9 @@ import {
   TableRow
 } from '@/components/ui/table';
 import { columns } from './columns';
+import { useStore } from '@/store';
+import { ServerPagination } from '@/components/ServerPagination';
 import { DataTableToolbar } from './Toolbar';
-import { ClientPagination } from '@/components/ClientPagination';
 
 interface DataTableProps {
   data: TDCVIPaginatedRes<TAdminUserItem>;
@@ -35,17 +36,17 @@ export function UsersTable({ data, placeholder }: DataTableProps) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
 
-  // const {
-  //   WalletStore: { setLimit, transQuery, setPage }
-  // } = useStore();
-  // const pagination: TPaginatedRes = {
-  //   currentPage: data.currentPage,
-  //   totalItems: data.totalItems,
-  //   totalPages: data.totalPages,
-  //   pathUrl: data.pathUrl,
-  //   previousPageUrl: data.previousPageUrl,
-  //   nextPageUrl: data.nextPageUrl
-  // };
+  const {
+    WalletStore: { setLimit, transQuery, setPage }
+  } = useStore();
+  const pagination: TPaginatedRes = {
+    currentPage: data.currentPage,
+    totalItems: data.totalItems,
+    totalPages: data.totalPages,
+    pathUrl: data.pathUrl,
+    previousPageUrl: data.previousPageUrl,
+    nextPageUrl: data.nextPageUrl
+  };
 
   const table = useReactTable({
     data: data.items,
@@ -69,14 +70,13 @@ export function UsersTable({ data, placeholder }: DataTableProps) {
     getFacetedUniqueValues: getFacetedUniqueValues(),
     initialState: {
       pagination: {
-        pageSize: 10
-        // pageSize: transQuery.Limit
+        pageSize: transQuery.Limit
       }
     }
   });
 
   return (
-    <div className="space-y-4 pb-30 md:pb-20">
+    <div className="space-y-4">
       <DataTableToolbar {...{ placeholder, table }} />
       <div className="rounded-md border">
         <Table>
@@ -116,9 +116,7 @@ export function UsersTable({ data, placeholder }: DataTableProps) {
           </TableBody>
         </Table>
       </div>
-      {/* <ServerPagination {...{ pagination, setLimit, setPage, Limit: transQuery.Limit }} /> */}
-        <ClientPagination table={table} />
-      
+      <ServerPagination {...{ pagination, setLimit, setPage, Limit: transQuery.Limit }} />
     </div>
   );
 }

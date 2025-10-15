@@ -3,7 +3,7 @@ import { RootStore } from '..';
 
 class SMSStore {
   rootStore: RootStore;
-  transQuery = { Limit: null as number | null, Page: 1 };
+  transQuery = { Limit: 10, Page: 1 };
 
   constructor(_rootStore: RootStore) {
     makeObservable(this, {

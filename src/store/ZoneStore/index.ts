@@ -3,7 +3,7 @@ import { RootStore } from '..';
 
 class ZoneStore {
   rootStore: RootStore;
-  zoneQuery = { Limit: null as number | null, Page: 1 };
+  zoneQuery = { Limit: 10, Page: 1 };
   zoneAttendanceQuery: Partial<TZoneAttendanceQuery> = {};
 
   constructor(_rootStore: RootStore) {

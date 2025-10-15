@@ -41,7 +41,7 @@ const Zones = () => {
               </Button>
             </div>
 
-            <ZonesTable {...{ placeholder: 'search zones...', data }} />
+            <ZonesTable {...{ placeholder: 'search zones', data }} />
           </div>
         )
       )}
