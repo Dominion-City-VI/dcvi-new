@@ -22,8 +22,7 @@ import {
 } from '@/components/ui/table';
 import { columns } from './columns';
 import { DataTableToolbar } from './DatatableToolbar';
-import { useStore } from '@/store';
-import { ServerPagination } from '@/components/ServerPagination';
+import { ClientPagination } from '@/components/ClientPagination';
 
 interface DataTableProps {
   data: TDCVIPaginatedRes<TAllZoneItem>;
@@ -35,18 +34,6 @@ export default function ZonesTable({ data, placeholder }: DataTableProps) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
-
-  const {
-    AdminStore: { setZoneLimit, zoneQuery, setZonePage }
-  } = useStore();
-  const pagination: TPaginatedRes = {
-    currentPage: data.currentPage,
-    totalItems: data.totalItems,
-    totalPages: data.totalPages,
-    pathUrl: data.pathUrl,
-    previousPageUrl: data.previousPageUrl,
-    nextPageUrl: data.nextPageUrl
-  };
 
   const table = useReactTable({
     data: data.items,
@@ -70,7 +57,7 @@ export default function ZonesTable({ data, placeholder }: DataTableProps) {
     getFacetedUniqueValues: getFacetedUniqueValues(),
     initialState: {
       pagination: {
-        pageSize: zoneQuery.Limit
+        pageSize: 10
       }
     }
   });
@@ -116,9 +103,7 @@ export default function ZonesTable({ data, placeholder }: DataTableProps) {
           </TableBody>
         </Table>
       </div>
-      <ServerPagination
-        {...{ pagination, setLimit: setZoneLimit, setPage: setZonePage, Limit: zoneQuery.Limit }}
-      />
+      <ClientPagination table={table} />
     </div>
   );
 }
