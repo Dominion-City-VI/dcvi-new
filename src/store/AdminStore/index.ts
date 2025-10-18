@@ -24,8 +24,8 @@ const toast = useStyledToast();
 
 class AdminStore {
   rootStore: RootStore;
-  usersQuery = { Limit: 10, Page: 1 };
-  zoneQuery = { Limit: 10, Page: 1 };
+  usersQuery = { Limit: 10000, Page: 1 };
+  zoneQuery = { Limit: 10000, Page: 1 };
   adminZoneAttendanceQuery: Partial<TAdminZonalAttendanceQuery> = {};
   isLoading = { ...INIT_IS_LOADING };
   errors = initializer(this.isLoading, '');
