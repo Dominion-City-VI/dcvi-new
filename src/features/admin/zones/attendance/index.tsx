@@ -10,7 +10,7 @@ import TableToolbar from './components/TableToolbar';  // Import the TableToolba
 
 const ZoneAttendance = () => {
   const {
-    AuthStore: { userExtraInfo },
+    // AuthStore: { userExtraInfo },
     AdminStore: { adminZoneAttendanceQuery }
   } = useStore();
 
