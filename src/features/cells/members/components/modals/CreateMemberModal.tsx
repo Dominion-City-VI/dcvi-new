@@ -484,20 +484,12 @@ export default function CreateMemberModal() {
   });
 
   function onSubmit(data: TOnboardMemberSchema) {
-    // Ensure boolean fields are explicitly set
     const submitData = {
       ...data,
       isAssistantCellLeader: data.isAssistantCellLeader ?? false,
       isConsideredLeader: data.isConsideredLeader ?? false,
       isDcMember: data.isDcMember ?? false
     };
-    
-    console.log('=== Submitting Data ===');
-    console.log('isDcMember:', submitData.isDcMember);
-    console.log('isConsideredLeader:', submitData.isConsideredLeader);
-    console.log('isAssistantCellLeader:', submitData.isAssistantCellLeader);
-    console.log('Full data:', submitData);
-    console.log('======================');
     
     mutate(submitData as TOnboardMemberSchema);
   }
