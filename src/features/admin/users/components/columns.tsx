@@ -120,10 +120,15 @@ export const columns: Array<ColumnDef<TAdminUserItem>> = [
     accessorKey: 'trainings',
     header: () => 'Trngs.',
     cell: ({ row }) => {
+      // Handle null or empty trainings
+      if (!row.original.trainings || row.original.trainings.length === 0) {
+        return <small className="text-muted-foreground">-</small>;
+      }
+
       return (
         <div className="flex space-x-2">
           <DropdownMenu>
-            <DropdownMenuTrigger>
+            <DropdownMenuTrigger asChild>
               <Button variant="secondary" size="sm">
                 <small className="text-muted-foreground">{row.original.trainings[0]}</small>
                 <ChevronDown />
@@ -146,10 +151,15 @@ export const columns: Array<ColumnDef<TAdminUserItem>> = [
     accessorKey: 'departments',
     header: () => 'Depts.',
     cell: ({ row }) => {
+      // Handle null or empty departments
+      if (!row.original.departments || row.original.departments.length === 0) {
+        return <small className="text-muted-foreground">-</small>;
+      }
+
       return (
         <div className="flex space-x-2">
           <DropdownMenu>
-            <DropdownMenuTrigger>
+            <DropdownMenuTrigger asChild>
               <Button variant="secondary" size="sm">
                 <small className="text-muted-foreground">{row.original.departments[0]}</small>
                 <ChevronDown />
@@ -175,7 +185,7 @@ export const columns: Array<ColumnDef<TAdminUserItem>> = [
       return (
         <div className="flex space-x-2">
           <DropdownMenu>
-            <DropdownMenuTrigger>
+            <DropdownMenuTrigger asChild>
               <Button variant="secondary" size="sm">
                 <small className="text-muted-foreground">
                   {
