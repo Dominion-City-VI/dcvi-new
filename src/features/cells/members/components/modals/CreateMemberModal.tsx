@@ -556,11 +556,11 @@ export default function CreateMemberModal() {
                 name="emailAddress"
                 render={({ field }) => (
                   <InputField
-                    label="Email"
+                    label="Email (Optional)"
                     id="email"
                     type="email"
                     placeholder="ifeanyi.nwakuche@gmail.com"
-                    required
+                    
                     {...field}
                   />
                 )}
@@ -723,7 +723,7 @@ export default function CreateMemberModal() {
                 render={({ field }) => (
                   <InputMultiSelect
                     {...field}
-                    label={'Trainings'}
+                    label={'Trainings (Optional)'}
                     isLoading={isTrngLoading}
                     options={trngs}
                     placeholder="Select trainings you like..."
@@ -775,7 +775,7 @@ export default function CreateMemberModal() {
                 render={({ field }) => (
                   <InputMultiSelect
                     {...field}
-                    label={'Departments'}
+                    label={'Departments (Optional)'}
                     isLoading={isDeptLoading}
                     options={depts}
                     placeholder="Select department you like..."
