@@ -16,7 +16,12 @@ export const postCellMember = (payload: TOnboardMemberSchema) =>
     trainings: payload.trainings.map((training) => training.value),
     departments: payload.departments.map((dept) => dept.value),
     gender: Number(payload.gender),
-    maritalStatus: Number(payload.maritalStatus)
+    maritalStatus: Number(payload.maritalStatus),
+    cellId: payload.cellId,
+    zoneId: payload.zoneId,
+    isConsideredLeader: payload.isConsideredLeader,
+    isDcMember: payload.isDcMember,
+
   });
 
 export const postUploadMember = (payload: TOnboardMemberSchema) =>

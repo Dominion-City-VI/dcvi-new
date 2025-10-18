@@ -1,27 +1,30 @@
-import { email, firstName, lastName, optionSchema, phoneNumber } from '@/features/auth/validation';
 import { z } from 'zod';
 
 export const OnboardMemberSchema = z.object({
-  firstName,
-  lastName,
-  phoneNumber,
-  address: z.string({ required_error: 'Address is required.' }).trim(),
-  emailAddress: email,
-  maritalStatus: z.string({ required_error: 'Marital status is required.' }).trim(),
-  gender: z.string({ required_error: 'Gender is required.' }).trim(),
-  occupation: z
-    .string({ required_error: 'Occupation is required' })
-    .trim()
-    .refine((value) => value !== '', 'Occupation is required'),
-  trainings: z.array(optionSchema, { required_error: 'Training is required' }).default([]),
-  departments: z.array(optionSchema, { required_error: 'Department is required' }).min(1),
-  zone: z
-    .string({ required_error: 'Zone is required.' })
-    .trim()
-    .refine((value) => value.length !== 0, 'Zone is required.'),
-  cell: z.string({ required_error: 'cell is required.' }).default(''),
-  isConsideredLeader: z.boolean().default(false),
-  isAssistantCellLeader: z.boolean().default(false)
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  emailAddress: z.string().email('Invalid email address'),
+  phoneNumber: z.string().min(1, 'Phone number is required'),
+  address: z.string().min(1, 'Address is required'),
+  occupation: z.string().min(1, 'Occupation is required'),
+  maritalStatus: z.string().min(1, 'Marital status is required'),
+  gender: z.string().min(1, 'Gender is required'),
+  zoneId: z.string(),
+  cellId: z.string(),
+  trainings: z.array(z.object({
+    value: z.string(),
+    label: z.string(),
+    disable: z.boolean().optional()
+  })).default([]),
+  departments: z.array(z.object({
+    value: z.string(),
+    label: z.string(),
+    disable: z.boolean().optional()
+  })).default([]),
+  // Use z.boolean() without .default() or .optional()
+  isAssistantCellLeader: z.boolean(),
+  isConsideredLeader: z.boolean(),
+  isDcMember: z.boolean()
 });
 
 export type TOnboardMemberSchema = z.infer<typeof OnboardMemberSchema>;
