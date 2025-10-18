@@ -15,7 +15,7 @@ const ZoneAttendance = () => {
   } = useStore();
 
   const [zonalAttendance, setAdminZonalAttendance] = useState<Array<TAdminAttendanceItem>>([]);
-  adminZoneAttendanceQuery.ZoneId = userExtraInfo.zonalId as string;
+  // adminZoneAttendanceQuery.ZoneId = userExtraInfo.zonalId as string;
   const { data, isLoading } = useFetchAdminAttendance(adminZoneAttendanceQuery);
 
   useEffect(() => {
