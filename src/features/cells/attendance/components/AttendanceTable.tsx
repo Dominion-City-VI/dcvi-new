@@ -60,7 +60,12 @@ const AttendanceTable = ({ cellAttendance, placeholder }: DataTableProps) => {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues()
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+    initialState: {
+      pagination: {
+        pageSize: 20
+      }
+    }
   });
 
   const headerGroups = table.getHeaderGroups();
