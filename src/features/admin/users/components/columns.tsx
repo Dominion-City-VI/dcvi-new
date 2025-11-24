@@ -178,47 +178,87 @@ export const columns: Array<ColumnDef<TAdminUserItem>> = [
     }
   },
 
-  {
-    accessorKey: 'roles',
-    header: () => 'Roles',
-    cell: ({ row }) => {
-      return (
-        <div className="flex space-x-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="sm">
-                <small className="text-muted-foreground">
-                  {
-                    sidebarData.roleSwitcher.filter((role) =>
-                      row.original.roles.includes(role.value)
-                    )[0].name
-                  }
-                </small>
-                <ChevronDown />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              {sidebarData.roleSwitcher
-                .filter((role) => row.original.roles.includes(role.value))
-                .map((role) => (
-                  <DropdownMenuItem key={role.value} className="gap-2 p-2">
-                    <small className="text-muted-foreground">{role.name}</small>
-                  </DropdownMenuItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      );
+  // {
+  //   accessorKey: 'roles',
+  //   header: () => 'Roles',
+  //   cell: ({ row }) => {
+  //     return (
+  //       <div className="flex space-x-2">
+  //         <DropdownMenu>
+  //           <DropdownMenuTrigger asChild>
+  //             <Button variant="secondary" size="sm">
+  //               <small className="text-muted-foreground">
+  //                 {
+  //                   sidebarData.roleSwitcher.filter((role) =>
+  //                     row.original.roles.includes(role.value)
+  //                   )[0].name
+  //                 }
+  //               </small>
+  //               <ChevronDown />
+  //             </Button>
+  //           </DropdownMenuTrigger>
+  //           <DropdownMenuContent>
+  //             {sidebarData.roleSwitcher
+  //               .filter((role) => row.original?.roles.includes(role?.value))
+  //               .map((role) => (
+  //                 <DropdownMenuItem key={role?.value} className="gap-2 p-2">
+  //                   <small className="text-muted-foreground">{role.name ?? ''}</small>
+  //                 </DropdownMenuItem>
+  //               ))}
+  //           </DropdownMenuContent>
+  //         </DropdownMenu>
+  //       </div>
+  //     );
+  //   }
+  // },
+{
+  accessorKey: 'roles',
+  header: () => 'Roles',
+  cell: ({ row }) => {
+    // Handle null or empty roles
+    if (!row.original.roles || row.original.roles.length === 0) {
+      return <small className="text-muted-foreground">-</small>;
     }
-  },
 
+    const matchingRoles = sidebarData.roleSwitcher.filter((role) =>
+      row.original.roles.includes(role.value)
+    );
+
+    // If no matching roles found, show placeholder
+    if (matchingRoles.length === 0) {
+      return <small className="text-muted-foreground">-</small>;
+    }
+
+    return (
+      <div className="flex space-x-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="secondary" size="sm">
+              <small className="text-muted-foreground">
+                {matchingRoles[0].name}
+              </small>
+              <ChevronDown />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {matchingRoles.map((role) => (
+              <DropdownMenuItem key={role.value} className="gap-2 p-2">
+                <small className="text-muted-foreground">{role.name}</small>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
+  }
+},
   {
     accessorKey: 'status',
     header: () => 'Status',
     cell: ({ row }) => {
       return (
         <small className="text-muted-foreground">
-          {statusMap[String(row.original.status)] ?? 'N/A'}
+          {statusMap[String(row.original?.status)] ?? 'N/A'}
           {/* {userStatus.filter((el) => row.original.status === Number(el.value))[0].label} */}
         </small>
       );

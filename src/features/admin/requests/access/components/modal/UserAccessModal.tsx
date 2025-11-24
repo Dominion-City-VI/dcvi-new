@@ -97,13 +97,27 @@ function UserAccessModal() {
     form.resetField('cellId');
   }, [selectedZone, form]);
 
+  // Prefill zone field with modal data
+  useEffect(() => {
+    if (zones.length > 0 && adminGrantAccessModal?.zoneId && !isEmptyGuid(adminGrantAccessModal.zoneId)) {
+      form.setValue('zoneId', adminGrantAccessModal.zoneId);
+    }
+  }, [zones, adminGrantAccessModal?.zoneId, form]);
+
+  // Prefill cell field with modal data
+  useEffect(() => {
+    if (cells.length > 0 && adminGrantAccessModal?.cellId && !isEmptyGuid(adminGrantAccessModal.cellId)) {
+      form.setValue('cellId', adminGrantAccessModal.cellId);
+    }
+  }, [cells, adminGrantAccessModal?.cellId, form]);
+
   // Check if zone/cell selection is needed based on roles
   const isEmptyGuid = (id: string | null | undefined) => {
     return !id || id === '00000000-0000-0000-0000-000000000000';
   };
 
-  const needsZoneSelection = selectedRoles.includes(4) && isEmptyGuid(adminGrantAccessModal?.zoneId);
-  const needsCellSelection = selectedRoles.includes(5) && isEmptyGuid(adminGrantAccessModal?.cellId);
+  const needsZoneSelection = selectedRoles.some(role => [4, 5, 6, 7].includes(role)) && isEmptyGuid(adminGrantAccessModal?.zoneId);
+  const needsCellSelection = selectedRoles.some(role => [5, 6, 7].includes(role)) && isEmptyGuid(adminGrantAccessModal?.cellId);
   const showZoneField = needsZoneSelection || needsCellSelection;
   const showCellField = needsCellSelection;
 
@@ -146,7 +160,13 @@ function UserAccessModal() {
   const { mutate, isPending } = useMutation({
     mutationFn: postGrantAccess,
     onError: (error) => {
-      toast.error(error.message);
+      const backendMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.data ||
+        error?.response?.data ||
+        error?.message ||
+        'An error occurred';
+        toast.error(backendMessage);;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({

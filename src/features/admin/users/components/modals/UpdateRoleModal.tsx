@@ -83,12 +83,12 @@ function UpdateRoleModal() {
     form.resetField('cellId');
   }, [selectedZone, form]);
 
-  const isEmptyGuid = (id: string | null | undefined) => {
-    return !id || id === '00000000-0000-0000-0000-000000000000';
-  };
+  // const isEmptyGuid = (id: string | null | undefined) => {
+  //   return !id || id === '00000000-0000-0000-0000-000000000000';
+  // };
 
-  const needsZoneSelection = selectedRole === '4' && isEmptyGuid(updateRoleModal.zoneId);
-  const needsCellSelection = selectedRole === '5' && isEmptyGuid(updateRoleModal.cellId);
+  const needsZoneSelection = (selectedRole === '4' || selectedRole === '7'|| selectedRole === '6' || selectedRole === '5');
+  const needsCellSelection = (selectedRole === '5' || selectedRole === '7'|| selectedRole === '6');
   const showZoneField = needsZoneSelection || needsCellSelection;
   const showCellField = needsCellSelection;
 

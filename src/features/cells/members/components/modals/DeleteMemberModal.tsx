@@ -19,7 +19,13 @@ export default function DeleteMemberModal() {
   const { mutate, isPending } = useMutation({
     mutationFn: delCellMember,
     onError: (error) => {
-      toast.error(error.message);
+      const backendMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.data ||
+        error?.response?.data ||
+        error?.message ||
+        'An error occurred';
+        toast.error(backendMessage);;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({

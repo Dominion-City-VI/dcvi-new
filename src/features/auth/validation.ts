@@ -158,13 +158,13 @@ export const OthersSchema = z.object({
     .refine((value) => value !== '', 'Occupation is required'),
   trainings: z.array(optionSchema, { required_error: 'Training is required' }).default([]),
   departments: z.array(optionSchema, { required_error: 'Department is required' }).min(1),
-  zone: z
+  zoneId: z
     .string()
     // .string({ required_error: 'Zone is required.' })
     .trim()
     // .refine((value) => value.length !== 0, 'Zone is required.'),
     .default(''),
-  cell: z.string({ required_error: 'cell is required.' }).default(''),
+  cellId: z.string({ required_error: 'cell is required.' }).default(''),
   isConsideredLeader: z.boolean().default(false),
   isAssistantCellLeader: z.boolean().default(false)
 });

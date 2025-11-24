@@ -8,16 +8,37 @@ import { DataTable } from '@/features/cells/members/components/DataTable';
 import { columns } from '@/features/cells/members/components/columns';
 import { Route } from '@/routes/_authenticated/zone/cells/$cellId';
 import { observer } from 'mobx-react-lite';
+import { useFetchCells } from '@/hooks/cell/useFetchCell';
 
 const CellId = () => {
-  const { cellId } = Route.useParams();
+  const {cellId } = Route.useParams();
+
   const {
     AuthStore: { userExtraInfo }
   } = useStore();
+  const [zonalId, setZonalId] = useState<string>('');
   const [cellMembers, setCellMembers] = useState<Array<TCellMember>>([]);
+
+  // Fetch cells to find the zoneId
+    const { data: cellsData, status: cellsStatus } = useFetchCells(
+      { take: '1.7976931348623157e%2B308' },
+      Boolean(cellId)
+    );
+  
+    // Find the cell and extract zoneId
+    useEffect(() => {
+      if (cellsStatus === 'success' && cellsData !== undefined && cellId) {
+        const foundCell = cellsData.items.find((item: { id: string; zoneId: string }) => item.id === cellId);
+        if (foundCell?.zoneId) {
+         
+          setZonalId(foundCell.zoneId);
+        }
+      }
+    }, [cellsData, cellsStatus, cellId]);
+
   const { data, isLoading } = useFetchCellMembers({
     CellId: cellId,
-    ZoneId: userExtraInfo.zonalId
+    ZoneId: zonalId
   });
 
   useEffect(() => {

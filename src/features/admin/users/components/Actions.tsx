@@ -34,12 +34,12 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             toggleModals({
               name: AppModals.UPDATE_ROLE_MODAL,
               open: true,
-              fullName: `${row.original.firstName} ${row.original.lastName}`,
-              emailAddress: row.original.email,
-              id: row.original.userId,
-              roles: row.original.roles,
-              zoneId: row.original.zoneId,
-              cellId: row.original.cellId
+              fullName: `${row.original?.firstName} ${row.original?.lastName}`,
+              emailAddress: row.original?.email,
+              id: row.original?.userId,
+              roles: row.original?.roles,
+              zoneId: row.original?.zoneId,
+              cellId: row.original?.cellId
             })
           }
         >
@@ -51,10 +51,10 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
               toggleModals({
                 name: AppModals.REVOKE_ROLE_MODAL,
                 open: true,
-                fullName: `${row.original.firstName} ${row.original.lastName}`,
-                emailAddress: row.original.email,
-                id: row.original.userId,
-                roles: row.original.roles
+                fullName: `${row.original?.firstName} ${row.original?.lastName}`,
+                emailAddress: row.original?.email,
+                id: row.original?.userId,
+                roles: row.original?.roles
               })
             }
           >
