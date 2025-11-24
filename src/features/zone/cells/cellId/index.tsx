@@ -14,14 +14,14 @@ const CellId = () => {
   const {cellId } = Route.useParams();
 
   const {
-    AuthStore: { userExtraInfo }
+    // AuthStore: { userExtraInfo }
   } = useStore();
   const [zonalId, setZonalId] = useState<string>('');
   const [cellMembers, setCellMembers] = useState<Array<TCellMember>>([]);
 
   // Fetch cells to find the zoneId
     const { data: cellsData, status: cellsStatus } = useFetchCells(
-      { take: '1.7976931348623157e%2B308' },
+      { },
       Boolean(cellId)
     );
   

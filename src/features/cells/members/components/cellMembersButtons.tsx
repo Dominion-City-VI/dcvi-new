@@ -92,7 +92,7 @@ function CellMembersButtons() {
 
   // Fetch cells to find the zoneId
   const { data: cellsData, status: cellsStatus } = useFetchCells(
-    { take: '1.7976931348623157e%2B308' },
+    { },
     Boolean(cellId)
   );
 
