@@ -27,6 +27,7 @@ import { observer } from 'mobx-react-lite';
 import { postGrantAccess } from '@/requests/admin';
 import { useFetchZones } from '@/hooks/zone/useFetchZone';
 import { useFetchCells } from '@/hooks/cell/useFetchCell';
+import { AxiosError } from 'axios';
 
 export const AdminGrantAccessPayload = z.object({
   requestId: z.string({ required_error: 'Provide a request ID.' }),
@@ -159,7 +160,7 @@ function UserAccessModal() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: postGrantAccess,
-    onError: (error) => {
+    onError: (error: AxiosError<any>) => {
       const backendMessage =
         error?.response?.data?.message ||
         error?.response?.data?.data ||

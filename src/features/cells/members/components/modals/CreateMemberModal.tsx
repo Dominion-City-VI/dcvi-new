@@ -29,6 +29,7 @@ import { useFetchDepartments } from '@/hooks/settings/useFetchDepartments';
 import { trnformToOptions } from '@/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { CELL } from '@/constants/api';
+import { AxiosError } from 'axios';
 
 export default function CreateMemberModal() {
   const {
@@ -71,7 +72,7 @@ export default function CreateMemberModal() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: postCellMember,
-    onError: (error) => {
+    onError: (error: AxiosError<any>) => {
       console.error('Mutation error:', error);
        
       // Safely extract your actual backend error

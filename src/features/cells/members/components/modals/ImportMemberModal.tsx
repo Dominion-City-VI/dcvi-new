@@ -14,6 +14,7 @@ import { Loader } from 'lucide-react';
 import { PHONEBOOK } from '@/constants/api';
 import { parseError } from '@/utils/errorHandler';
 import { useStyledToast } from '@/hooks/custom/useStyledToast';
+import { AxiosError } from 'axios';
 
 const formSchema = z.object({
   File: z
@@ -43,7 +44,7 @@ export default function ImportMemberModal() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: postUploadCellMember,
-    onError: (error) => {
+    onError: (error: AxiosError<any>) => {
       toast.error(parseError(error));
     },
     onSuccess: (data) => {

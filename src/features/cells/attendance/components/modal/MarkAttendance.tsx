@@ -81,7 +81,7 @@
 
 //   const { mutate, isPending } = useMutation({
 //     mutationFn: postMarkAttendance,
-//     onError: (error) => {
+//     onError: (error: AxiosError<any>) => {
 //       toast.error(parseError(error));
 //     },
 //     onSuccess: () => {
@@ -237,6 +237,7 @@ import { useStyledToast } from '@/hooks/custom/useStyledToast';
 import { Loader } from 'lucide-react';
 import { ATTENDANCE } from '@/constants/api';
 import { parseError } from '@/utils/errorHandler';
+import { AxiosError } from 'axios';
 
 const MeetingType = z
   .object({
@@ -310,7 +311,7 @@ export default function MarkAttendanceModal() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: postMarkAttendance,
-    onError: (error) => {
+    onError: (error: AxiosError<any>) => {
       toast.error(parseError(error));
     },
     onSuccess: () => {

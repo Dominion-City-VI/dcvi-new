@@ -8,6 +8,7 @@ import { delCellMember } from '@/requests/cell';
 import { toast } from 'sonner';
 import { Loader } from 'lucide-react';
 import { CELL } from '@/constants/api';
+import { AxiosError } from 'axios';
 
 export default function DeleteMemberModal() {
   const {
@@ -18,7 +19,7 @@ export default function DeleteMemberModal() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: delCellMember,
-    onError: (error) => {
+    onError: (error: AxiosError<any>) => {
       const backendMessage =
         error?.response?.data?.message ||
         error?.response?.data?.data ||

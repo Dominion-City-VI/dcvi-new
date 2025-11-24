@@ -10,6 +10,7 @@ import { putPwdUpdate } from '@/requests/user';
 import { useStyledToast } from '@/hooks/custom/useStyledToast';
 import { parseError } from '@/utils/errorHandler';
 import { Loader } from 'lucide-react';
+import { AxiosError } from 'axios';
 
 export const accountFormSchema = z
   .object({
@@ -32,7 +33,7 @@ export function AccountForm() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: putPwdUpdate,
-    onError: (error) => {
+    onError: (error: AxiosError<any>) => {
       toast.error(parseError(error));
     },
     onSuccess: () => {

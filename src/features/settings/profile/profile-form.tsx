@@ -17,6 +17,7 @@ import { putBioUpdate } from '@/requests/user';
 import { useMutation } from '@tanstack/react-query';
 import { parseError } from '@/utils/errorHandler';
 import { Loader } from 'lucide-react';
+import { AxiosError } from 'axios';
 
 export const ProfileFormSchema = z.object({
   email,
@@ -63,7 +64,7 @@ export default function ProfileForm() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: putBioUpdate,
-    onError: (error) => {
+    onError: (error: AxiosError<any>) => {
       toast.error(parseError(error));
     },
     onSuccess: () => {

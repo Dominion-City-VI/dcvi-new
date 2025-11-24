@@ -13,6 +13,7 @@ import { NewZoneSchema, TNewZoneSchema } from '../validation';
 import InputField from '@/components/fields/InputField';
 import { postZone } from '@/requests/zone';
 import { EnumZoneStatus } from '@/constants/mangle';
+import { AxiosError } from 'axios';
 
 export default function CreateZoneModal() {
   const {
@@ -33,7 +34,7 @@ export default function CreateZoneModal() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: postZone,
-    onError: (error) => {
+    onError: (error: AxiosError<any>) => {
       const backendMessage =
         error?.response?.data?.message ||
         error?.response?.data?.data ||

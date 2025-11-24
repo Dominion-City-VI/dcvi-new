@@ -14,6 +14,7 @@ import { Form, FormField } from '@/components/ui/form';
 import { Loader } from 'lucide-react';
 import TextareaField from '@/components/fields/TextareaField';
 import { EnumZoneStatus } from '@/constants/mangle';
+import { AxiosError } from 'axios';
 
 export default function DeleteZoneModal() {
   const toast = useStyledToast();
@@ -32,7 +33,7 @@ export default function DeleteZoneModal() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: delZone,
-    onError: (error) => {
+    onError: (error: AxiosError<any>) => {
       const backendMessage =
         error?.response?.data?.message ||
         error?.response?.data?.data ||

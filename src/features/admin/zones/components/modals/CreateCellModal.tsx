@@ -57,7 +57,7 @@
 
 //   const { mutate, isPending } = useMutation({
 //     mutationFn: postCell,
-//     onError: (error) => {
+//     onError: (error: AxiosError<any>) => {
 //       const backendMessage =
         // error?.response?.data?.message ||
         // error?.response?.data?.data ||
@@ -310,6 +310,7 @@ import { postCell } from '@/requests/cell';
 import InputSelect from '@/components/fields/InputSelect';
 import { cellTypeOptions } from '@/constants/data';
 import { zone } from '@/hooks/zone/FetchKeyFactory';
+import { AxiosError } from 'axios';
 
 const daysOfWeek = [
   { value: 'sunday', label: 'Sunday' },
@@ -356,7 +357,7 @@ export default function CreateCellModal() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: postCell,
-    onError: (error) => {
+    onError: (error: AxiosError<any>) => {
       const backendMessage =
         error?.response?.data?.message ||
         error?.response?.data?.data ||

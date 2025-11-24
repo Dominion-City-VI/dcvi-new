@@ -52,8 +52,8 @@ const OthersForm = ({ className, ...props }: React.ComponentPropsWithoutRef<'div
     take: '1.7976931348623157e%2B308'
   });
   const { data: cellData, status: cellStatus } = useFetchCells(
-    { ZoneId: form.watch('zone') },
-    Boolean(form.watch('zone'))
+    { ZoneId: form.watch('zoneId') },
+    Boolean(form.watch('zoneId'))
   );
 
   useEffect(() => {
@@ -83,8 +83,8 @@ const OthersForm = ({ className, ...props }: React.ComponentPropsWithoutRef<'div
   }, [cellData, cellStatus]);
 
   useEffect(() => {
-    form.resetField('cell');
-  }, [form.watch('zone')]);
+    form.resetField('cellId');
+  }, [form.watch('zoneId')]);
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
@@ -152,7 +152,7 @@ const OthersForm = ({ className, ...props }: React.ComponentPropsWithoutRef<'div
                 <div className="flex w-full items-start justify-between space-x-2">
                   <FormField
                     control={form.control}
-                    name="zone"
+                    name="zoneId"
                     render={({ field }) => (
                       <InputSelect
                         {...field}
@@ -167,7 +167,7 @@ const OthersForm = ({ className, ...props }: React.ComponentPropsWithoutRef<'div
                   />
                   <FormField
                     control={form.control}
-                    name="cell"
+                    name="cellId"
                     render={({ field }) => (
                       <InputSelect
                         {...field}
