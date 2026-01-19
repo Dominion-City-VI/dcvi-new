@@ -549,6 +549,7 @@ class AppConfigStore {
    * the modal name, if no options are passed, all modals will be closed
    */
   toggleModals(modal: TAppModalsAction = {}) {
+    
     switch (modal.name) {
       case '':
         break;
