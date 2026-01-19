@@ -38,11 +38,34 @@ type TcellAttenanceResponseVMsItem = {
   };
 };
 
+type TDeptAttenanceResponseVMsItem = {
+  id: string;
+  dateRange: string;
+  tuesdayDate: string;
+  sundayDate: string;
+  cellDate: string;
+  serviceDates: string;
+  departmentId: string;
+  record: {
+    attendanceId: null;
+    cellAttendanceStatus: number;
+    sundayAttendanceStatus: number;
+    tuesdayAttendanceStatus: number;
+  };
+};
+
 type TCellAttendanceItem = {
   memberId: string;
   cellId: string;
   memberName: string;
   cellAttenanceResponseVMs: Array<TcellAttenanceResponseVMsItem>;
+};
+
+type TDeptAttendanceItem = {
+  memberId: string;
+  cellId: string;
+  memberName: string;
+  deptAttenanceResponseVMs: Array<TDeptAttenanceResponseVMsItem>;
 };
 
 type TCellAttendanceCellLeader = {

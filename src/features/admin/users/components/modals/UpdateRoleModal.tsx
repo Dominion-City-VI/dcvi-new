@@ -17,14 +17,16 @@ import { observer } from 'mobx-react-lite';
 import { useEffect, useState } from 'react';
 import { useFetchZones } from '@/hooks/zone/useFetchZone';
 import { useFetchCells } from '@/hooks/cell/useFetchCell';
+import { useFetchAllDepartments } from '@/hooks/department/useFetchAllDepartments';
 
 export const UpdateRoleSchema = z.object({
   emailAddress: z.string().email('Invalid email.'),
   role: z.string(),
   id: z.string(),
-  description: z.string(),
-  cellId: z.string(),
-  zoneId: z.string(),
+  description: z.string().optional(),
+  cellId: z.string().optional(),
+  zoneId: z.string().optional(),
+  departmentId: z.string().optional(),
 });
 
 export type TUpdateRoleSchema = z.infer<typeof UpdateRoleSchema>;
@@ -38,6 +40,7 @@ function UpdateRoleModal() {
   const queryClient = useQueryClient();
   const [zones, setZones] = useState<{ label: string; value: string }[]>([]);
   const [cells, setCells] = useState<{ label: string; value: string }[]>([]);
+  const [departments, setDepartments] = useState<{ label: string; value: string }[]>([]);
 
   const form = useForm<TUpdateRoleSchema>({
     defaultValues: { 
@@ -45,6 +48,7 @@ function UpdateRoleModal() {
       emailAddress: updateRoleModal.emailAddress,
       zoneId: updateRoleModal.zoneId || '',
       cellId: updateRoleModal.cellId || '',
+      departmentId: updateRoleModal.departmentId || '',
       description: '',
       role: ''
     },
@@ -61,23 +65,33 @@ function UpdateRoleModal() {
   });
 
   const { data: cellData, status: cellStatus } = useFetchCells(
-    { ZoneId: selectedZone },
+    { ZoneId: selectedZone},
     Boolean(selectedZone)
   );
 
+  const { data: departmentData, status: departmentStatus } = useFetchAllDepartments();
+
   useEffect(() => {
     if (zoneStatus === 'success' && zoneData !== undefined) {
-      const zoneArr = zoneData.items.map((item: { name: any; id: any; }) => ({ label: item.name, value: item.id }));
+      const zoneArr = zoneData.items?.map((item: { name: any; id: any; }) => ({ label: item.name, value: item.id })) || [];
       setZones(zoneArr);
     }
   }, [zoneData, zoneStatus]);
 
   useEffect(() => {
     if (cellStatus === 'success' && cellData !== undefined) {
-      const cellArr = cellData.items.map((item: { name: any; id: any; }) => ({ label: item.name, value: item.id }));
+      const cellArr = cellData.items?.map((item: { name: any; id: any; }) => ({ label: item.name, value: item.id })) || [];
       setCells(cellArr);
     }
   }, [cellData, cellStatus]);
+
+  useEffect(() => {
+    if (departmentStatus === 'success' && departmentData !== undefined && Array.isArray(departmentData)) {
+      const departmentArr = departmentData.map((item: { name: any; id: any; }) => ({ label: item.name, value: item.id }));
+      console.log('Departments mapped:', departmentArr);
+      setDepartments(departmentArr);
+    }
+  }, [departmentData, departmentStatus]);
 
   useEffect(() => {
     form.resetField('cellId');
@@ -89,8 +103,11 @@ function UpdateRoleModal() {
 
   const needsZoneSelection = (selectedRole === '4' || selectedRole === '7'|| selectedRole === '6' || selectedRole === '5');
   const needsCellSelection = (selectedRole === '5' || selectedRole === '7'|| selectedRole === '6');
+  const needsDepartmentSelection = (selectedRole === '8' || selectedRole === '9');
+  
   const showZoneField = needsZoneSelection || needsCellSelection;
   const showCellField = needsCellSelection;
+  const showDepartmentField = needsDepartmentSelection;
 
   const rolesByValAndLabel = () => {
     return otherRoles(updateRoleModal.roles).map((el) => ({
@@ -132,7 +149,7 @@ function UpdateRoleModal() {
                       label="Role"
                       items={rolesByValAndLabel()}
                       placeholder="Select Role..."
-                      defaultValue={field.value}
+                      value={field.value || ''}
                       onValueChange={field.onChange}
                       required
                     />
@@ -150,7 +167,7 @@ function UpdateRoleModal() {
                           label="Zone"
                           items={zones}
                           placeholder="Select zone..."
-                          defaultValue={field.value}
+                          value={field.value || ''}
                           onValueChange={field.onChange}
                           required={needsZoneSelection || needsCellSelection}
                         />
@@ -167,7 +184,7 @@ function UpdateRoleModal() {
                             label="Cell"
                             items={cells}
                             placeholder="Select cell..."
-                            defaultValue={field.value}
+                            value={field.value || ''}
                             onValueChange={field.onChange}
                             required={needsCellSelection}
                           />
@@ -175,6 +192,24 @@ function UpdateRoleModal() {
                       />
                     )}
                   </div>
+                )}
+
+                {showDepartmentField && (
+                  <FormField
+                    control={form.control}
+                    name="departmentId"
+                    render={({ field }) => (
+                      <InputSelect
+                        {...field}
+                        label="Department"
+                        items={departments}
+                        placeholder="Select department..."
+                        value={field.value || ''}
+                        onValueChange={field.onChange}
+                        required={needsDepartmentSelection}
+                      />
+                    )}
+                  />
                 )}
 
                 <FormField

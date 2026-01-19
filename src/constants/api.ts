@@ -10,7 +10,10 @@ export const AUTH = {
 export const PROFILE = {
   USER_INFO: '/profile-mgt/get-user-info',
   UPDATE_PROFILE: '/profile-mgt/update-password',
-  UPDATE_DATA: '/profile-mgt/update-bio-data'
+  UPDATE_DATA: '/profile-mgt/update-bio-data',
+
+  GET_USER_INFO: '/profile-mgt/get-user/:id',
+  UPDATE_USER_INFO: '/profile-mgt/update-User-data/:id',
 } as const;
 
 export const ADMIN = {
@@ -24,13 +27,22 @@ export const ADMIN = {
   REVOKE_USER_ROLE: '/admin/revoke-ad-access',
   MERGE_ZONE: '/admin/merge-zone',
   MERGE_CELL: '/admin/merge-cell'
-};
+} as const;
 
 export const ZONE = {
   CREATE: '/zone',
   ANALYTICS: '/zone/:id/dashboard-analytics',
   GET: '/zone',
   GET_BY_ID: '/zone/:id'
+} as const;
+
+export const DEPARTMENTS = {
+  GET: '/department',
+  GET_WITH_MEMBERS:'/department/with-people',
+  GET_BY_ID_AND_MEMBERS:'/department/:id/people', 
+  ONBOARD: '/department/membership-onboarding/:departmentId',
+  UPLOAD_MEMBERS: '/department/upload-membership-onboarding',
+  REMOVE_MEMBER: '/department/member/:userId/:departmentId',
 } as const;
 
 export const CELL = {
@@ -53,8 +65,10 @@ export const ATTENDANCE = {
   STATUS_SUMMARY: '/cell-attendance/attendance-status-summary',
   PERCENTAGE_MARKED: '/cell-attendance/percentage-marked',
   ZONAL_ATTENDANCE: '/cell-attendance/:zonalId/zonal-attendance',
-  ADMIN_ATTENDANCE: '/cell-attendance/admin-attendance'
-};
+  ADMIN_ATTENDANCE: '/cell-attendance/admin-attendance',
+  MARK_DEPARTMENT_ATTENDANCE: '/department-attendance/:departmentId',
+  FETCH_DEPARTMENT_ATTENDANCE: '/department-attendance/get-dept-attendance'
+} as const;
 
 export const SETTINGS = {
   TRAININGS: '/settings/get-trainings',

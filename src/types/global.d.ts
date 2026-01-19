@@ -67,6 +67,7 @@ type TProfileExtraInfo = {
   cellId?: string;
   myProperty: number;
   zonalId?: string;
+  departmentId?: string;
 };
 
 type TLoginRes = {

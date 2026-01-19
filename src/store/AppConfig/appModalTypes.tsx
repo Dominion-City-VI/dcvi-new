@@ -9,6 +9,7 @@ export enum AppModals {
   VIEW_MEMBER_MODAL = 'VIEW_MEMBER_MODAL',
   DELETE_MEMBER_MODAL = 'DELETE_MEMBER_MODAL',
   MARK_ATTENDANCE_MODAL = 'MARK_ATTENDANCE_MODAL',
+  DEPARTMENT_MARK_ATTENDANCE_MODAL = 'DEPARTMENT_MARK_ATTENDANCE_MODAL',
   SEND_SMS_MODAL = 'SEND_SMS_MODAL',
   FUND_WALLET_MODAL = 'FUND_WALLET_MODAL',
   DELETE_CELL_MODAL = 'DELETE_CELL_MODAL',
@@ -24,7 +25,11 @@ export enum AppModals {
   DELETE_REQUEST_MODAL = 'DELETE_REQUEST_MODAL',
   CREATE_ZONE = 'CREATE_ZONE',
   CREATE_CELL = 'CREATE_CELL',
-  ADMIN_ACCEPT_REJECT_REQUEST_MODAL = 'ADMIN_ACCEPT_REJECT_REQUEST_MODAL'
+  ADMIN_ACCEPT_REJECT_REQUEST_MODAL = 'ADMIN_ACCEPT_REJECT_REQUEST_MODAL',
+  DEPARTMENT_ADD_MEMBER = 'DEPARTMENT_ADD_MEMBER',
+  DEPARTMENT_DELETE_MEMBER_MODAL = 'DEPARTMENT_DELETE_MEMBER_MODAL',
+  DEPARTMENT_VIEW_MEMBER_MODAL = 'DEPARTMENT_VIEW_MEMBER_MODAL',
+  VIEW_DEPARTMENT_MODAL = 'VIEW_DEPARTMENT_MODAL',
 }
 
 export type TAppModalsAction =
@@ -57,6 +62,14 @@ export type TAppModalsAction =
         }
       | { open?: false }
     ))
+  | ({ name: AppModals.DEPARTMENT_DELETE_MEMBER_MODAL } & (
+      | {
+          open: true;
+          userId: string,
+          departmentId: string
+        }
+      | { open?: false }
+    ))
   | ({ name: AppModals.DONE } & (
       | {
           open: true;
@@ -76,7 +89,7 @@ export type TAppModalsAction =
       | { open?: false }
     ))
   | ({
-      name: AppModals.VIEW_MEMBER_MODAL | AppModals.CREATE_CELL;
+      name: AppModals.VIEW_MEMBER_MODAL | AppModals.DEPARTMENT_VIEW_MEMBER_MODAL | AppModals.CREATE_CELL | AppModals.VIEW_DEPARTMENT_MODAL;
     } & (
       | {
           open: true;
@@ -95,7 +108,21 @@ export type TAppModalsAction =
         }
       | { open?: false }
     ))
-  | ({ name: AppModals.DELETE_REQUEST_MODAL } & (
+  |
+  ({ name: AppModals.DEPARTMENT_MARK_ATTENDANCE_MODAL } & (
+      | {
+          open: true;
+          id: string;
+          isAttendaceUpdate: boolean;
+          sundayServiceDate: string;
+          tuesdayServiceDate: string;
+          cellMeetingDate: string;
+          departmentId: string;
+        }
+      | { open?: false }
+    ))
+  |  
+  ({ name: AppModals.DELETE_REQUEST_MODAL } & (
       | {
           open: true;
           id: string;
@@ -111,6 +138,7 @@ export type TAppModalsAction =
           id: string;
           zoneId: string;
           cellId: string;
+          departmentId: string;
         }
       | { open?: false }
     ))
@@ -141,6 +169,7 @@ export type TAppModalsAction =
           cellId: string;
           roles: Array<number>;
           requestStatus: number;
+          departmentId: string
         }
       | { open?: false }
     ))
@@ -180,6 +209,17 @@ export type TAppModalsAction =
           open: true;
           cellId: string;
           zonalId: string;
+        }
+      | { open?: false }
+    ))
+    | ({
+      name: AppModals.DEPARTMENT_ADD_MEMBER;
+    } & (
+      | {
+          open: true;
+          cellId: string;
+          zonalId: string;
+          departmentId: string
         }
       | { open?: false }
     ));

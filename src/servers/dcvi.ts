@@ -2,6 +2,7 @@ import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'ax
 import { Stores } from '@/store';
 
 const BASE_URL = 'https://cms-backend-i97e.onrender.com/api/v1'; // ?? import.meta.env.VITE_APP_API_BASE_URL;
+//const BASE_URL = 'http://localhost/api/v1'; // ?? import.meta.env.VITE_APP_API_BASE_URL;
 
 const resourceReqInterceptor = (config: InternalAxiosRequestConfig) => {
   const modifiedConfig = { ...config };

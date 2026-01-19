@@ -8,6 +8,7 @@ import WalletStore from './WalletStore';
 import ZoneStore from './ZoneStore';
 import AdminStore from './AdminStore';
 import SMSStore from './SmsStore';
+import DepartmentStore from './DepartmentStore';
 
 configure({
   enforceActions: 'observed',
@@ -22,6 +23,7 @@ export class RootStore {
   AppConfigStore: AppConfigStore;
   AuthStore: AuthStore;
   CellStore: CellStore;
+  DepartmentStore: DepartmentStore;
   WalletStore: WalletStore;
   ZoneStore: ZoneStore;
   AdminStore: AdminStore;
@@ -31,6 +33,7 @@ export class RootStore {
     this.AppConfigStore = new AppConfigStore(this);
     this.AuthStore = new AuthStore(this);
     this.CellStore = new CellStore(this);
+    this.DepartmentStore = new DepartmentStore(this);
     this.WalletStore = new WalletStore(this);
     this.ZoneStore = new ZoneStore(this);
     this.AdminStore = new AdminStore(this);

@@ -69,7 +69,19 @@ const ModalsMap = {
   ),
   [AppModals.CREATE_CELL]: lazy(
     () => import('@/features/admin/zones/components/modals/CreateCellModal')
-  )
+  ),
+  [AppModals.DEPARTMENT_ADD_MEMBER]: lazy(
+  () => import('@/features/departments/members/components/modals/CreateMemberModal')
+  ),
+  [AppModals.DEPARTMENT_MARK_ATTENDANCE_MODAL]: lazy(
+  () => import('@/features/departments/attendance/components/modal/MarkAttendance')
+  ),[AppModals.DEPARTMENT_VIEW_MEMBER_MODAL]: lazy(
+    () => import('@/features/departments/members/components/modals/ViewMemberModal')
+  ),[AppModals.DEPARTMENT_DELETE_MEMBER_MODAL]: lazy(
+    () => import('@/features/departments/members/components/modals/DeleteMemberModal')
+  ),[AppModals.VIEW_DEPARTMENT_MODAL]: lazy(
+    () => import('@/features/admin/departments/dept/components/modals/ViewDepartmentPeopleModal')
+  ),
 };
 
 const ModalsBank = () => {

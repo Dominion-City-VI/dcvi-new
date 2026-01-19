@@ -18,6 +18,9 @@ import { Route as accessRequestRoute } from '@/routes/_authenticated/admin/reque
 import { Route as actionRequestRoute } from '@/routes/_authenticated/admin/requests/actions';
 import { Route as adminZonesRoute } from '@/routes/_authenticated/admin/zones';
 import { Route as adminZonesAttendaceRoute } from '@/routes/_authenticated/admin/zones/attendance';
+import { Route as departmentAttendaceRoute } from '@/routes/_authenticated/department/deptAttendance';
+import { Route as departmentMembersRoute } from '@/routes/_authenticated/department/departmentMembers';
+import { Route as AdmindepartmentAndMembersRoute } from '@/routes/_authenticated/admin/departments';
 
 export const sidebarData: SidebarData = {
   roleSwitcher: [
@@ -157,18 +160,52 @@ export const sidebarData: SidebarData = {
         {
           title: 'Manage Zone',
           icon: TableCellsMerge,
-          rba: [EnumRoles.SUPER_ADMIN,EnumRoles.SUB_ADMIN,EnumRoles.PASTOR],
+          rba: [EnumRoles.SUPER_ADMIN,EnumRoles.SUB_ADMIN,EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR],
           items: [
             {
               title: 'Zone',
               url: adminZonesRoute.fullPath,
-              rba: [EnumRoles.SUPER_ADMIN,EnumRoles.SUB_ADMIN,EnumRoles.PASTOR]
+              rba: [EnumRoles.SUPER_ADMIN,EnumRoles.SUB_ADMIN,EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
             },
             {
               title: 'Attendance',
               url: adminZonesAttendaceRoute.fullPath,//zone/attendance
-              rba: [EnumRoles.SUPER_ADMIN,EnumRoles.SUB_ADMIN,EnumRoles.PASTOR]
+              rba: [EnumRoles.SUPER_ADMIN,EnumRoles.SUB_ADMIN,EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
             }
+          ]
+        },
+        {
+          title: 'Manage Department',
+          icon: TableCellsMerge,
+          rba: [EnumRoles.DEPARTMENTAL_HEAD, EnumRoles.ASST_DEPARTMENTAL_HEAD],
+          items: [
+            {
+              title: 'Department',
+              url: departmentMembersRoute.fullPath,
+              rba: [EnumRoles.DEPARTMENTAL_HEAD, EnumRoles.ASST_DEPARTMENTAL_HEAD]
+            },
+            {
+              title: 'Attendance',
+              url: departmentAttendaceRoute.fullPath,
+              rba: [EnumRoles.DEPARTMENTAL_HEAD, EnumRoles.ASST_DEPARTMENTAL_HEAD]
+            }
+          ]
+        },
+
+        {
+          title: 'Manage Department',
+          icon: TableCellsMerge,
+          rba: [EnumRoles.SUPER_ADMIN,EnumRoles.SUB_ADMIN,EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR],
+          items: [
+            {
+              title: 'Service Units',
+              url: AdmindepartmentAndMembersRoute.fullPath,
+              rba: [EnumRoles.SUPER_ADMIN,EnumRoles.SUB_ADMIN,EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
+            },
+            {
+              title: 'Attendance Overview',
+              url: departmentAttendaceRoute.fullPath,
+              rba: [EnumRoles.SUPER_ADMIN,EnumRoles.SUB_ADMIN,EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]            }
           ]
         }
       ]

@@ -181,4 +181,5 @@ type TGetSingleCellMember = {
   phoneNumber: string;
   id: string;
   cellLeader: string | null;
+  dateOfBirth: date | null
 };
