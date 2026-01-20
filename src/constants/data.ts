@@ -16,10 +16,18 @@ export const maritalStatus: Array<Option> = [
   {
     label: 'Widowed',
     value: '3'
+  },
+  {
+    label: 'Unknown',
+    value: '4'
   }
 ];
 
 export const gender: Array<Option> = [
+  {
+    label: 'Unknown',
+    value: '0'
+  },
   {
     label: 'Male',
     value: '1'
