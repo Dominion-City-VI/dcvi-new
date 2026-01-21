@@ -103,7 +103,7 @@ function UpdateRoleModal() {
 
   const needsZoneSelection = (selectedRole === '4' || selectedRole === '7'|| selectedRole === '6' || selectedRole === '5');
   const needsCellSelection = (selectedRole === '5' || selectedRole === '7'|| selectedRole === '6');
-  const needsDepartmentSelection = (selectedRole === '8' || selectedRole === '9');
+  const needsDepartmentSelection = (selectedRole === '8' || selectedRole === '9' || selectedRole === '7');
   
   const showZoneField = needsZoneSelection || needsCellSelection;
   const showCellField = needsCellSelection;

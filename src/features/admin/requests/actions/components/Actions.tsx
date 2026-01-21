@@ -72,7 +72,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             Delete zone
           </DropdownMenuItem>
         )}
-        {requestType === EnumActionRequestType.MEMBER_DELETE && (
+        {(requestType === EnumActionRequestType.MEMBER_DELETE || requestType === EnumActionRequestType.REMOVE_DEPT_MEMBER) && (
           <DropdownMenuItem  onClick={() => 
               toggleModals({
               open: true,
@@ -80,7 +80,8 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
                 id: id,
                 requestType,
                 requestorComments: requesterComments,
-                requestStatus
+                requestStatus,
+                subActionId: subActionId
               })
             }>
           {requestStatus === 1 ? 'Review Request' : requestStatus === 2 ? 'Reject Request' : 'Approve Request'}

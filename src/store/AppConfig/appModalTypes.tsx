@@ -180,6 +180,7 @@ export type TAppModalsAction =
           requestType: number;
           requestorComments: Array<string>;
           requestStatus: number;
+          subActionId: string;
         }
       | { open?: false }
     ))

@@ -40,15 +40,67 @@ const columns: ColumnDef<People>[] = [
   },
   { accessorKey: 'email', header: 'Email' },
   { accessorKey: 'phoneNumber', header: 'Phone' },
+
   {
-    id: 'role',
-    header: 'Role',
-    cell: ({ row }) => {
-      const p = row.original;
-      const roles = [p.isLeader ? 'Leader' : null, p.isAssistant ? 'Assistant' : null].filter(Boolean);
-      return <span>{roles.length ? roles.join(', ') : 'Member'}</span>;
+  id: "role",
+  header: "Role",
+  cell: ({ row }) => {
+    const p = row.original;
+
+    const roles = [
+      p.isLeader ? { label: "Leader", bg: "#DCFCE7", color: "#166534" } : null,      // green
+      p.isAssistant ? { label: "Assistant", bg: "#DBEAFE", color: "#1D4ED8" } : null // blue
+    ].filter(Boolean) as { label: string; bg: string; color: string }[];
+
+    if (!roles.length) {
+      return (
+        <span
+          style={{
+            padding: "4px 10px",
+            borderRadius: "999px",
+            background: "#F3F4F6",
+            color: "#374151",
+            fontSize: "12px",
+            fontWeight: 600
+          }}
+        >
+          Member
+        </span>
+      );
     }
+
+    return (
+      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+        {roles.map((r) => (
+          <span
+            key={r.label}
+            style={{
+              padding: "4px 10px",
+              borderRadius: "999px",
+              background: r.bg,
+              color: r.color,
+              fontSize: "12px",
+              fontWeight: 700,
+              border: `1px solid ${r.color}30`
+            }}
+          >
+            {r.label}
+          </span>
+        ))}
+      </div>
+    );
   }
+}
+
+  // {
+  //   id: 'role',
+  //   header: 'Role',
+  //   cell: ({ row }) => {
+  //     const p = row.original;
+  //     const roles = [p.isLeader ? 'Leader' : null, p.isAssistant ? 'Assistant' : null].filter(Boolean);
+  //     return <span>{roles.length ? roles.join(', ') : 'Member'}</span>;
+  //   }
+  // }
 ];
 
 export default function ViewDepartmentPeopleModal() {

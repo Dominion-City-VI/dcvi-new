@@ -22,6 +22,11 @@ export const actionRequestTypes = new Map<EnumActionRequestType, string>([
   ],
 
   [
+    EnumActionRequestType.REMOVE_DEPT_MEMBER,
+    'bg-red-100/40 text-red-800 dark:text-red-200 border-purple-300'
+  ],
+
+  [
     EnumActionRequestType.ZONAL_MERGE,
     'bg-blue-100/40 text-blue-800 dark:text-blue-200 border-blue-300'
   ]

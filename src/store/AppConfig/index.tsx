@@ -481,7 +481,8 @@ class AppConfigStore {
     id: '',
     requestStatus: 0,
     requestType: 0,
-    requestorComments: ['']
+    requestorComments: [''],
+    subActionId: ''
   };
 
   mergeModal = {
@@ -577,13 +578,13 @@ class AppConfigStore {
           };
         }
         break;
-      case AppModals.DEPARTMENT_DELETE_MEMBER_MODAL:
-        if(modal.open){
-          this.deleteUserModal = {
-
-          }
-        }
-        break;
+      // case AppModals.DEPARTMENT_DELETE_MEMBER_MODAL:
+      //   if(modal.open){
+      //     this.deleteUserModal = {
+      //       userId: modal.
+      //     }
+      //   }
+      //   break;
       case AppModals.DELETE_MEMBER_MODAL:
         if (modal.open) {
           this.deleteModal = {
@@ -715,7 +716,8 @@ class AppConfigStore {
             id: modal.id,
             requestStatus: modal.requestStatus,
             requestorComments: modal.requestorComments,
-            requestType: modal.requestType
+            requestType: modal.requestType,
+            subActionId: modal.subActionId,
           };
         }
         break;

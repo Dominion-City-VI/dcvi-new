@@ -310,7 +310,8 @@ export enum EnumActionRequestType {
   ZONAL_MERGE = 2,
   MEMBER_DELETE = 3,
   DELETE_CELL = 4,
-  DELETE_ZONE = 5
+  DELETE_ZONE = 5,
+  REMOVE_DEPT_MEMBER = 6
 }
 
 export enum EnumActionRequestStatus {
@@ -341,6 +342,11 @@ export const ACTION_REQUEST_TYPE: Record<string, ActionRequestTypes> = {
     enum: EnumActionRequestType.MEMBER_DELETE,
     name: 'MEMBER_DELETE',
     text: 'Member delete'
+  },
+  REMOVE_DEPT_MEMBER: {
+    enum: EnumActionRequestType.REMOVE_DEPT_MEMBER,
+    name: 'REMOVE_DEPT_MEMBER',
+    text: 'Remove Member'
   }
 };
 
