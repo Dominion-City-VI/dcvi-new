@@ -3,6 +3,29 @@ import pool from '../db.js';
 
 const router = express.Router();
 
+// ─── Simple TTL cache (5 minutes) ─────────────────────────────────────────────
+
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const cache = new Map();
+
+function cacheGet(key) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) { cache.delete(key); return null; }
+  return entry.value;
+}
+
+function cacheSet(key, value) {
+  cache.set(key, { value, ts: Date.now() });
+  return value;
+}
+
+async function cached(key, fn) {
+  const hit = cacheGet(key);
+  if (hit !== null) return hit;
+  return cacheSet(key, await fn());
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getDateFrom(period) {
@@ -85,23 +108,27 @@ async function getCellAttendanceData(period, extraWhere = '', extraParams = []) 
 router.get('/analytics/admin', async (req, res) => {
   try {
     const { period = '1' } = req.query;
-    const { perf, periodic } = await getCellAttendanceData(period);
+    const key = `admin:${period}`;
 
-    const [memberRes, zoneRes] = await Promise.all([
-      pool.query('SELECT COUNT(*) AS count FROM "Members"'),
-      pool.query('SELECT COUNT(*) AS count FROM "Zones"')
-    ]);
+    const data = await cached(key, async () => {
+      const { perf, periodic } = await getCellAttendanceData(period);
+      const [memberRes, zoneRes] = await Promise.all([
+        pool.query('SELECT COUNT(*) AS count FROM "Members"'),
+        pool.query('SELECT COUNT(*) AS count FROM "Zones"')
+      ]);
+      return {
+        performanceInPercentage: {
+          cellStrength:      parseInt(memberRes.rows[0].count),
+          sundayService:     parseFloat(perf?.sundayService     ?? 0),
+          tuesdayAttendance: parseFloat(perf?.tuesdayAttendance ?? 0),
+          cellAttendance:    parseFloat(perf?.cellAttendance    ?? 0)
+        },
+        periodicAnalysisDatapoint: periodic,
+        cellCount: parseInt(zoneRes.rows[0].count)
+      };
+    });
 
-    res.json(wrapResult({
-      performanceInPercentage: {
-        cellStrength: parseInt(memberRes.rows[0].count),
-        sundayService:       parseFloat(perf?.sundayService       ?? 0),
-        tuesdayAttendance:   parseFloat(perf?.tuesdayAttendance   ?? 0),
-        cellAttendance:      parseFloat(perf?.cellAttendance      ?? 0)
-      },
-      periodicAnalysisDatapoint: periodic,
-      cellCount: parseInt(zoneRes.rows[0].count)
-    }));
+    res.json(wrapResult(data));
   } catch (err) {
     console.error('[admin analytics]', err.message);
     res.status(500).json(errResult(err.message));
@@ -113,23 +140,27 @@ router.get('/analytics/zone/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { period = '1' } = req.query;
-    const { perf, periodic } = await getCellAttendanceData(period, 'AND ca."ZoneId" = $2', [id]);
+    const key = `zone:${id}:${period}`;
 
-    const [memberRes, cellRes] = await Promise.all([
-      pool.query('SELECT COUNT(*) AS count FROM "Members" WHERE "ZoneId" = $1', [id]),
-      pool.query('SELECT COUNT(*) AS count FROM "Cells"   WHERE "ZoneId" = $1', [id])
-    ]);
+    const data = await cached(key, async () => {
+      const { perf, periodic } = await getCellAttendanceData(period, 'AND ca."ZoneId" = $2', [id]);
+      const [memberRes, cellRes] = await Promise.all([
+        pool.query('SELECT COUNT(*) AS count FROM "Members" WHERE "ZoneId" = $1', [id]),
+        pool.query('SELECT COUNT(*) AS count FROM "Cells"   WHERE "ZoneId" = $1', [id])
+      ]);
+      return {
+        performanceInPercentage: {
+          cellStrength:      parseInt(memberRes.rows[0].count),
+          sundayService:     parseFloat(perf?.sundayService     ?? 0),
+          tuesdayAttendance: parseFloat(perf?.tuesdayAttendance ?? 0),
+          cellAttendance:    parseFloat(perf?.cellAttendance    ?? 0)
+        },
+        periodicAnalysisDatapoint: periodic,
+        cellCount: parseInt(cellRes.rows[0].count)
+      };
+    });
 
-    res.json(wrapResult({
-      performanceInPercentage: {
-        cellStrength:      parseInt(memberRes.rows[0].count),
-        sundayService:     parseFloat(perf?.sundayService     ?? 0),
-        tuesdayAttendance: parseFloat(perf?.tuesdayAttendance ?? 0),
-        cellAttendance:    parseFloat(perf?.cellAttendance    ?? 0)
-      },
-      periodicAnalysisDatapoint: periodic,
-      cellCount: parseInt(cellRes.rows[0].count)
-    }));
+    res.json(wrapResult(data));
   } catch (err) {
     console.error('[zone analytics]', err.message);
     res.status(500).json(errResult(err.message));
@@ -141,21 +172,25 @@ router.get('/analytics/cell/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { period = '1' } = req.query;
-    const { perf, periodic } = await getCellAttendanceData(period, 'AND ca."CellId" = $2', [id]);
+    const key = `cell:${id}:${period}`;
 
-    const memberRes = await pool.query(
-      'SELECT COUNT(*) AS count FROM "Members" WHERE "CellId" = $1', [id]
-    );
+    const data = await cached(key, async () => {
+      const { perf, periodic } = await getCellAttendanceData(period, 'AND ca."CellId" = $2', [id]);
+      const memberRes = await pool.query(
+        'SELECT COUNT(*) AS count FROM "Members" WHERE "CellId" = $1', [id]
+      );
+      return {
+        performanceInPercentage: {
+          cellStrength:      parseInt(memberRes.rows[0].count),
+          sundayService:     parseFloat(perf?.sundayService     ?? 0),
+          tuesdayAttendance: parseFloat(perf?.tuesdayAttendance ?? 0),
+          cellAttendance:    parseFloat(perf?.cellAttendance    ?? 0)
+        },
+        periodicAnalysisDatapoint: periodic
+      };
+    });
 
-    res.json(wrapResult({
-      performanceInPercentage: {
-        cellStrength:      parseInt(memberRes.rows[0].count),
-        sundayService:     parseFloat(perf?.sundayService     ?? 0),
-        tuesdayAttendance: parseFloat(perf?.tuesdayAttendance ?? 0),
-        cellAttendance:    parseFloat(perf?.cellAttendance    ?? 0)
-      },
-      periodicAnalysisDatapoint: periodic
-    }));
+    res.json(wrapResult(data));
   } catch (err) {
     console.error('[cell analytics]', err.message);
     res.status(500).json(errResult(err.message));
@@ -166,27 +201,25 @@ router.get('/analytics/cell/:id', async (req, res) => {
 router.get('/analytics/service-summary', async (req, res) => {
   try {
     const { Period = '1', RolesUnitAccessType = '0', Id } = req.query;
-    const dateFrom = getDateFrom(Period);
-    const roleType = parseInt(RolesUnitAccessType);
-    const isDept = roleType === 8 || roleType === 9;
+    const key = `service-summary:${Period}:${RolesUnitAccessType}:${Id ?? 'all'}`;
 
-    let params = [dateFrom];
-    let whereExtra = '';
+    const data = await cached(key, async () => {
+      const dateFrom = getDateFrom(Period);
+      const roleType = parseInt(RolesUnitAccessType);
+      const isDept = roleType === 8 || roleType === 9;
 
-    if (isDept && Id) {
-      whereExtra = 'AND da."DepartmentId" = $2';
-      params.push(Id);
-    } else if (roleType === 4 && Id) {
-      whereExtra = 'AND ca."ZoneId" = $2';
-      params.push(Id);
-    } else if ((roleType === 5 || roleType === 6) && Id) {
-      whereExtra = 'AND ca."CellId" = $2';
-      params.push(Id);
-    }
+      let params = [dateFrom];
+      let whereExtra = '';
 
-    let query;
-    if (isDept) {
-      query = `
+      if (isDept && Id) {
+        whereExtra = 'AND da."DepartmentId" = $2'; params.push(Id);
+      } else if (roleType === 4 && Id) {
+        whereExtra = 'AND ca."ZoneId" = $2'; params.push(Id);
+      } else if ((roleType === 5 || roleType === 6) && Id) {
+        whereExtra = 'AND ca."CellId" = $2'; params.push(Id);
+      }
+
+      const query = isDept ? `
         SELECT
           COUNT(*)::int AS total,
           COUNT(CASE WHEN s."AttendanceStatus" = 1 THEN 1 END)::int AS "totalSunday",
@@ -200,9 +233,7 @@ router.get('/analytics/service-summary', async (req, res) => {
         JOIN "Sunday"  s ON da."SundayServiceId"  = s."Id"
         JOIN "Tuesday" t ON da."TuesdayServiceId" = t."Id"
         WHERE s."SundayService" >= $1 ${whereExtra}
-      `;
-    } else {
-      query = `
+      ` : `
         SELECT
           COUNT(*)::int AS total,
           COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)::int AS "totalSunday",
@@ -218,21 +249,22 @@ router.get('/analytics/service-summary', async (req, res) => {
         JOIN "CellMeeting" cm ON ca."CellMeetingId"    = cm."Id"
         WHERE s."SundayService" >= $1 ${whereExtra}
       `;
-    }
 
-    const result = await pool.query(query, params);
-    const row = result.rows[0];
+      const result = await pool.query(query, params);
+      const row = result.rows[0];
+      return {
+        total:                        row.total,
+        totalSunday:                  row.totalSunday,
+        totalTuesday:                 row.totalTuesday,
+        totalCellAttendees:           row.totalCellAttendees,
+        totalSundayPercentage:        parseFloat(row.totalSundayPercentage        ?? 0),
+        totalTuesdayPercentage:       parseFloat(row.totalTuesdayPercentage       ?? 0),
+        totalCellAttendeesPercentage: parseFloat(row.totalCellAttendeesPercentage ?? 0),
+        totalPercentage:              parseFloat(row.totalPercentage               ?? 0)
+      };
+    });
 
-    res.json(wrapResult({
-      total:                       row.total,
-      totalSunday:                 row.totalSunday,
-      totalTuesday:                row.totalTuesday,
-      totalCellAttendees:          row.totalCellAttendees,
-      totalSundayPercentage:       parseFloat(row.totalSundayPercentage       ?? 0),
-      totalTuesdayPercentage:      parseFloat(row.totalTuesdayPercentage      ?? 0),
-      totalCellAttendeesPercentage:parseFloat(row.totalCellAttendeesPercentage?? 0),
-      totalPercentage:             parseFloat(row.totalPercentage              ?? 0)
-    }));
+    res.json(wrapResult(data));
   } catch (err) {
     console.error('[service summary]', err.message);
     res.status(500).json(errResult(err.message));
@@ -243,43 +275,47 @@ router.get('/analytics/service-summary', async (req, res) => {
 router.get('/analytics/status-summary', async (req, res) => {
   try {
     const { Period = '1', RolesUnitAccessType = '0', Id } = req.query;
-    const dateFrom = getDateFrom(Period);
-    const roleType = parseInt(RolesUnitAccessType);
-    const isDept = roleType === 8 || roleType === 9;
+    const key = `status-summary:${Period}:${RolesUnitAccessType}:${Id ?? 'all'}`;
 
-    let params = [dateFrom];
-    let table = '"CellAttendance" ca';
-    let joinSunday = 'JOIN "Sunday" s ON ca."SundayServiceId" = s."Id"';
-    let whereExtra = '';
+    const data = await cached(key, async () => {
+      const dateFrom = getDateFrom(Period);
+      const roleType = parseInt(RolesUnitAccessType);
+      const isDept = roleType === 8 || roleType === 9;
 
-    if (isDept && Id) {
-      table = '"DepartmentAttendances" da';
-      joinSunday = 'JOIN "Sunday" s ON da."SundayServiceId" = s."Id"';
-      whereExtra = 'AND da."DepartmentId" = $2';
-      params.push(Id);
-    } else if (roleType === 4 && Id) {
-      whereExtra = 'AND ca."ZoneId" = $2';
-      params.push(Id);
-    } else if ((roleType === 5 || roleType === 6) && Id) {
-      whereExtra = 'AND ca."CellId" = $2';
-      params.push(Id);
-    }
+      let params = [dateFrom];
+      let table = '"CellAttendance" ca';
+      let joinSunday = 'JOIN "Sunday" s ON ca."SundayServiceId" = s."Id"';
+      let whereExtra = '';
 
-    const query = `
-      SELECT
-        COUNT(*)::int                                              AS total,
-        COUNT(CASE WHEN s."AttendanceStatus" = 1 THEN 1 END)::int AS "totalPresent",
-        COUNT(CASE WHEN s."AttendanceStatus" = 2 THEN 1 END)::int AS "totalAbsent",
-        COUNT(CASE WHEN s."AttendanceStatus" = 3 THEN 1 END)::int AS "totalSick",
-        COUNT(CASE WHEN s."AttendanceStatus" = 4 THEN 1 END)::int AS "totalTravel",
-        COUNT(CASE WHEN s."AttendanceStatus" = 5 THEN 1 END)::int AS "totalNCM"
-      FROM ${table}
-      ${joinSunday}
-      WHERE s."SundayService" >= $1 ${whereExtra}
-    `;
+      if (isDept && Id) {
+        table = '"DepartmentAttendances" da';
+        joinSunday = 'JOIN "Sunday" s ON da."SundayServiceId" = s."Id"';
+        whereExtra = 'AND da."DepartmentId" = $2';
+        params.push(Id);
+      } else if (roleType === 4 && Id) {
+        whereExtra = 'AND ca."ZoneId" = $2'; params.push(Id);
+      } else if ((roleType === 5 || roleType === 6) && Id) {
+        whereExtra = 'AND ca."CellId" = $2'; params.push(Id);
+      }
 
-    const result = await pool.query(query, params);
-    res.json(wrapResult(result.rows[0]));
+      const query = `
+        SELECT
+          COUNT(*)::int                                              AS total,
+          COUNT(CASE WHEN s."AttendanceStatus" = 1 THEN 1 END)::int AS "totalPresent",
+          COUNT(CASE WHEN s."AttendanceStatus" = 2 THEN 1 END)::int AS "totalAbsent",
+          COUNT(CASE WHEN s."AttendanceStatus" = 3 THEN 1 END)::int AS "totalSick",
+          COUNT(CASE WHEN s."AttendanceStatus" = 4 THEN 1 END)::int AS "totalTravel",
+          COUNT(CASE WHEN s."AttendanceStatus" = 5 THEN 1 END)::int AS "totalNCM"
+        FROM ${table}
+        ${joinSunday}
+        WHERE s."SundayService" >= $1 ${whereExtra}
+      `;
+
+      const result = await pool.query(query, params);
+      return result.rows[0];
+    });
+
+    res.json(wrapResult(data));
   } catch (err) {
     console.error('[status summary]', err.message);
     res.status(500).json(errResult(err.message));

@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import pool from './db.js';
 import analyticsRouter from './routes/analytics.js';
 
 const app = express();
@@ -14,6 +15,12 @@ app.get('/api/local/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
   console.log(`Analytics API running on port ${PORT}`);
+  try {
+    await pool.query('SELECT 1');
+    console.log('DB connection warmed up');
+  } catch (err) {
+    console.error('DB warmup failed:', err.message);
+  }
 });
