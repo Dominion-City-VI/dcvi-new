@@ -1,11 +1,14 @@
 import { ADMIN } from '@/constants/api';
 
+const LOCAL_ADMIN_ANALYTICS = '/analytics/admin';
+
 export const admin = {
   getAnalytics(query: TCellAnalyticsQuery) {
     return {
-      path: ADMIN.GET_ANALYTICS,
-      keys: () => [ADMIN.GET_ANALYTICS, query] as const,
-      params: query
+      path: LOCAL_ADMIN_ANALYTICS,
+      keys: () => [LOCAL_ADMIN_ANALYTICS, query] as const,
+      params: query,
+      requestServer: 'localServer' as const
     };
   },
 

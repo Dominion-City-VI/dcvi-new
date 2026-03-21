@@ -1,5 +1,8 @@
 import { ATTENDANCE } from '@/constants/api';
 
+const LOCAL_SERVICE_SUMMARY = '/analytics/service-summary';
+const LOCAL_STATUS_SUMMARY = '/analytics/status-summary';
+
 export const attendance = {
   getCellAttendance(query: Partial<TCellAttendanceQuery>) {
     return {
@@ -19,17 +22,19 @@ export const attendance = {
 
   getServiceSummary(query: Partial<TCellAttendanceSummaryQuery>) {
     return {
-      path: ATTENDANCE.SERVICE_SUMMARY,
-      keys: () => [ATTENDANCE.GET, ATTENDANCE.SERVICE_SUMMARY, query] as const,
-      params: query
+      path: LOCAL_SERVICE_SUMMARY,
+      keys: () => [LOCAL_SERVICE_SUMMARY, query] as const,
+      params: query,
+      requestServer: 'localServer' as const
     };
   },
 
   getStatusSummary(query: Partial<TCellAttendanceSummaryQuery>) {
     return {
-      path: ATTENDANCE.STATUS_SUMMARY,
-      keys: () => [ATTENDANCE.GET, ATTENDANCE.STATUS_SUMMARY, query] as const,
-      params: query
+      path: LOCAL_STATUS_SUMMARY,
+      keys: () => [LOCAL_STATUS_SUMMARY, query] as const,
+      params: query,
+      requestServer: 'localServer' as const
     };
   },
 

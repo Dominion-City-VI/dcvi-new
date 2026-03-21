@@ -1,13 +1,18 @@
 import { ZONE } from '@/constants/api';
 
+const LOCAL_ZONE_ANALYTICS = '/analytics/zone/:id';
+
 export const zone = {
   getZoneAnalytics(query: TZoneAnalyticsQuery) {
+    const path = LOCAL_ZONE_ANALYTICS.replace(':id', query.id);
     return {
-      path: ZONE.ANALYTICS.replace(':id', query.id),
-      keys: () => [ZONE.ANALYTICS, query] as const,
-      params: { period: query.period }
+      path,
+      keys: () => [LOCAL_ZONE_ANALYTICS, query] as const,
+      params: { period: query.period },
+      requestServer: 'localServer' as const
     };
   },
+
   getZone(query: Partial<TZoneQuery>) {
     return {
       path: ZONE.GET,

@@ -1,5 +1,7 @@
 import { CELL } from '@/constants/api';
 
+const LOCAL_CELL_ANALYTICS = '/analytics/cell/:id';
+
 export const cell = {
   getCell(query: Partial<TCellQuery>) {
     return {
@@ -10,10 +12,12 @@ export const cell = {
   },
 
   getCellAnalytics(query: TCellAnalyticsQuery, id?: string) {
+    const path = LOCAL_CELL_ANALYTICS.replace(':id', id ?? '');
     return {
-      path: CELL.GET_ANALYTICS.replace(':id', id ?? ''),
-      keys: () => [CELL.GET_ANALYTICS.replace(':id', id ?? ''), query] as const,
-      params: query
+      path,
+      keys: () => [LOCAL_CELL_ANALYTICS.replace(':id', id ?? ''), query] as const,
+      params: query,
+      requestServer: 'localServer' as const
     };
   },
 

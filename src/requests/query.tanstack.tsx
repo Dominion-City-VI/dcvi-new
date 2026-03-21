@@ -1,19 +1,21 @@
 import { QueryClient, QueryClientProvider, QueryFunction, QueryKey } from '@tanstack/react-query';
 import { PropsWithChildren, useState } from 'react';
 import dcviServer from '@/servers/dcvi';
+import localServer from '@/servers/localServer';
 
 export const staleTime = 1000 * 60 * 5; // 5 minutes
 export const refetchInterval = 1000 * 60 * 8; // 8 minutes
 export const gcTime = 1000 * 60 * 60; // 1 hour
 
 const call = {
-  dcviServer
+  dcviServer,
+  localServer
 };
 
 export type TRequestClient = keyof typeof call;
 
 function getReqClient(client: TRequestClient = 'dcviServer') {
-  return call[client] ?? client;
+  return call[client] ?? call['dcviServer'];
 }
 
 const queryFn: QueryFunction<unknown, QueryKey, number> = async ({ signal, pageParam, meta }) => {
