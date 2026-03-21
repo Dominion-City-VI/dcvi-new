@@ -9,65 +9,20 @@ import {
   Users,
   Wallet2
 } from 'lucide-react';
-import { Route } from '@/routes/_authenticated/index';
-import { Route as phoneBookRoute } from '@/routes/_authenticated/messaging/phone-book';
-import { Route as sendMessageRoute } from '@/routes/_authenticated/messaging/sms';
-import { Route as walletRoute } from '@/routes/_authenticated/wallet';
-import { Route as usersRoute } from '@/routes/_authenticated/admin/users';
-import { Route as accessRequestRoute } from '@/routes/_authenticated/admin/requests/access';
-import { Route as actionRequestRoute } from '@/routes/_authenticated/admin/requests/actions';
-import { Route as adminZonesRoute } from '@/routes/_authenticated/admin/zones';
-import { Route as adminZonesAttendaceRoute } from '@/routes/_authenticated/admin/zones/attendance';
-import { Route as departmentAttendaceRoute } from '@/routes/_authenticated/department/deptAttendance';
-import { Route as departmentMembersRoute } from '@/routes/_authenticated/department/departmentMembers';
-import { Route as AdmindepartmentAndMembersRoute } from '@/routes/_authenticated/admin/departments';
 
 export const sidebarData: SidebarData = {
   roleSwitcher: [
-    {
-      name: 'Admin',
-      value: EnumRoles.SUPER_ADMIN
-    },
-    {
-      name: 'Sub Admin',
-      value: EnumRoles.SUB_ADMIN
-    },
-    {
-      name: 'Senior Pastor',
-      value: EnumRoles.SENIOR_PASTOR
-    },
-    {
-      name: 'Pastor',
-      value: EnumRoles.PASTOR
-    },
-    {
-      name: 'District Pastor',
-      value: EnumRoles.DISTRICT_PASTOR
-    },
-    {
-      name: 'Zonal Pastor',
-      value: EnumRoles.ZONAL_PASTOR
-    },
-    {
-      name: 'Cell Leader',
-      value: EnumRoles.CELL_LEADER
-    },
-    {
-      name: 'Asst. cell leader',
-      value: EnumRoles.ASST_CELL_LEADER
-    },
-    {
-      name: 'Member',
-      value: EnumRoles.MEMBER
-    },
-    {
-      name: 'Departmental Head',
-      value: EnumRoles.DEPARTMENTAL_HEAD
-    },
-    {
-      name: 'Asst. dept. head',
-      value: EnumRoles.ASST_DEPARTMENTAL_HEAD
-    }
+    { name: 'Admin', value: EnumRoles.SUPER_ADMIN },
+    { name: 'Sub Admin', value: EnumRoles.SUB_ADMIN },
+    { name: 'Senior Pastor', value: EnumRoles.SENIOR_PASTOR },
+    { name: 'Pastor', value: EnumRoles.PASTOR },
+    { name: 'District Pastor', value: EnumRoles.DISTRICT_PASTOR },
+    { name: 'Zonal Pastor', value: EnumRoles.ZONAL_PASTOR },
+    { name: 'Cell Leader', value: EnumRoles.CELL_LEADER },
+    { name: 'Asst. cell leader', value: EnumRoles.ASST_CELL_LEADER },
+    { name: 'Member', value: EnumRoles.MEMBER },
+    { name: 'Departmental Head', value: EnumRoles.DEPARTMENTAL_HEAD },
+    { name: 'Asst. dept. head', value: EnumRoles.ASST_DEPARTMENTAL_HEAD }
   ],
   navGroups: [
     {
@@ -75,7 +30,7 @@ export const sidebarData: SidebarData = {
       items: [
         {
           title: 'Dashboard',
-          url: Route.fullPath,
+          url: '/',
           icon: IconLayoutDashboard,
           rba: []
         },
@@ -84,13 +39,13 @@ export const sidebarData: SidebarData = {
           icon: MessageSquare,
           rba: [],
           items: [
-            { title: 'sms', url: sendMessageRoute.fullPath, rba: [] },
-            { title: 'Phone book', url: phoneBookRoute.fullPath, rba: [] }
+            { title: 'SMS', url: '/messaging/sms', rba: [] },
+            { title: 'Phone book', url: '/messaging/phone-book', rba: [] }
           ]
         },
         {
           title: 'Wallet',
-          url: walletRoute.fullPath,
+          url: '/wallet',
           icon: Wallet2,
           rba: []
         }
@@ -100,20 +55,12 @@ export const sidebarData: SidebarData = {
       title: 'Management',
       items: [
         {
-          title: 'Manage cell',
+          title: 'Manage Cell',
           icon: TableCellsMerge,
           rba: [EnumRoles.CELL_LEADER, EnumRoles.ASST_CELL_LEADER],
           items: [
-            {
-              title: 'Members',
-              url: '/cell/members',
-              rba: []
-            },
-            {
-              title: 'Attendance',
-              url: '/cell/attendance',
-              rba: []
-            }
+            { title: 'Members', url: '/cell/members', rba: [] },
+            { title: 'Attendance', url: '/cell/attendance', rba: [] }
           ]
         },
         {
@@ -121,23 +68,15 @@ export const sidebarData: SidebarData = {
           icon: TableCellsMerge,
           rba: [EnumRoles.ZONAL_PASTOR],
           items: [
-            {
-              title: 'Zone',
-              url: '/zone/cells',
-              rba: []
-            },
-            {
-              title: 'Attendance',
-              url: '/zone/attendance',
-              rba: []
-            }
+            { title: 'Zone', url: '/zone/cells', rba: [] },
+            { title: 'Attendance', url: '/zone/attendance', rba: [] }
           ]
         },
         {
           title: 'Users',
           icon: Users,
           rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN],
-          url: usersRoute.fullPath
+          url: '/admin/users'
         },
         {
           title: 'Requests',
@@ -146,31 +85,30 @@ export const sidebarData: SidebarData = {
           items: [
             {
               title: 'Access',
-              url: accessRequestRoute.fullPath,
+              url: '/admin/requests/access',
               rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN]
             },
             {
               title: 'Actions',
-              url: actionRequestRoute.fullPath,
+              url: '/admin/requests/actions',
               rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN]
             }
           ]
         },
-
         {
           title: 'Manage Zone',
           icon: TableCellsMerge,
-          rba: [EnumRoles.SUPER_ADMIN,EnumRoles.SUB_ADMIN,EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR],
+          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR],
           items: [
             {
               title: 'Zone',
-              url: adminZonesRoute.fullPath,
-              rba: [EnumRoles.SUPER_ADMIN,EnumRoles.SUB_ADMIN,EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
+              url: '/admin/zones',
+              rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
             },
             {
               title: 'Attendance',
-              url: adminZonesAttendaceRoute.fullPath,//zone/attendance
-              rba: [EnumRoles.SUPER_ADMIN,EnumRoles.SUB_ADMIN,EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
+              url: '/admin/zones/attendance',
+              rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
             }
           ]
         },
@@ -181,31 +119,31 @@ export const sidebarData: SidebarData = {
           items: [
             {
               title: 'Department',
-              url: departmentMembersRoute.fullPath,
+              url: '/department/departmentMembers',
               rba: [EnumRoles.DEPARTMENTAL_HEAD, EnumRoles.ASST_DEPARTMENTAL_HEAD]
             },
             {
               title: 'Attendance',
-              url: departmentAttendaceRoute.fullPath,
+              url: '/department/deptAttendance',
               rba: [EnumRoles.DEPARTMENTAL_HEAD, EnumRoles.ASST_DEPARTMENTAL_HEAD]
             }
           ]
         },
-
         {
           title: 'Manage Department',
           icon: TableCellsMerge,
-          rba: [EnumRoles.SUPER_ADMIN,EnumRoles.SUB_ADMIN,EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR],
+          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR],
           items: [
             {
               title: 'Service Units',
-              url: AdmindepartmentAndMembersRoute.fullPath,
-              rba: [EnumRoles.SUPER_ADMIN,EnumRoles.SUB_ADMIN,EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
+              url: '/admin/departments',
+              rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
             },
             {
               title: 'Attendance Overview',
-              url: departmentAttendaceRoute.fullPath,
-              rba: [EnumRoles.SUPER_ADMIN,EnumRoles.SUB_ADMIN,EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]            }
+              url: '/department/deptAttendance',
+              rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
+            }
           ]
         }
       ]
@@ -218,18 +156,8 @@ export const sidebarData: SidebarData = {
           icon: SettingsIcon,
           rba: [],
           items: [
-            {
-              title: 'Profile',
-              url: '/settings',
-              icon: IconUserCog,
-              rba: []
-            },
-            {
-              title: 'Account',
-              url: '/settings/account',
-              icon: IconTool,
-              rba: []
-            }
+            { title: 'Profile', url: '/settings', icon: IconUserCog, rba: [] },
+            { title: 'Account', url: '/settings/account', icon: IconTool, rba: [] }
           ]
         }
       ]
