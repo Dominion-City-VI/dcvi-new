@@ -89,6 +89,7 @@ type TPerformanceKPI = {
   sundayPresent?: number;
   tuesdayPresent?: number;
   cellPresent?: number;
+  contributingCells?: number;
   sundayPct: number;
   tuesdayPct: number;
   cellPct: number;
@@ -176,11 +177,19 @@ type TCellLeaderItem = TLeaderInfo & {
   performance: TPerformanceKPI;
 };
 
+type TDeptAssistantItem = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  lastLogin: string | null;
+};
+
 type TDeptLeaderItem = TLeaderInfo & {
   department: string;
   departmentId: string;
-  isAssistant: boolean;
-  performance: TPerformanceKPI & { totalRecords: number };
+  performance: TPerformanceKPI;
+  assistants: TDeptAssistantItem[];
 };
 
 type TLeadersOverview = {

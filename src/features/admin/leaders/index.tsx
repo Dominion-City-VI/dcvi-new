@@ -73,7 +73,6 @@ const LeadersOverview = () => {
 
   const q = search.toLowerCase().trim();
 
-  // ── unique zones from cell leaders
   const uniqueZones = useMemo(() => {
     const seen = new Set<string>();
     const result: { id: string; name: string }[] = [];
@@ -83,7 +82,6 @@ const LeadersOverview = () => {
     return result.sort((a, b) => a.name.localeCompare(b.name));
   }, [data?.cellLeaders]);
 
-  // ── unique depts from dept leaders
   const uniqueDepts = useMemo(() => {
     const seen = new Set<string>();
     const result: { id: string; name: string }[] = [];
@@ -93,21 +91,18 @@ const LeadersOverview = () => {
     return result.sort((a, b) => a.name.localeCompare(b.name));
   }, [data?.deptLeaders]);
 
-  // ── Filtered zonal leaders
   const filteredZonal = useMemo(() => {
     return (data?.zonalLeaders ?? []).filter(l =>
       !q || l.name.toLowerCase().includes(q) || l.email.toLowerCase().includes(q) || l.zone.toLowerCase().includes(q)
     );
   }, [data?.zonalLeaders, q]);
 
-  // ── Cell leaders filtered + grouped by zone
   const cellGroupedByZone = useMemo(() => {
     const filtered = (data?.cellLeaders ?? []).filter(l => {
       const matchesSearch = !q || l.name.toLowerCase().includes(q) || l.email.toLowerCase().includes(q) || l.cell.toLowerCase().includes(q);
       const matchesZone   = zoneFilter === ALL || l.zoneId === zoneFilter;
       return matchesSearch && matchesZone;
     });
-
     const grouped: Record<string, { zoneName: string; leaders: typeof filtered }> = {};
     for (const l of filtered) {
       if (!grouped[l.zoneId]) grouped[l.zoneId] = { zoneName: l.zone, leaders: [] };
@@ -116,27 +111,28 @@ const LeadersOverview = () => {
     return Object.entries(grouped).sort(([, a], [, b]) => a.zoneName.localeCompare(b.zoneName));
   }, [data?.cellLeaders, q, zoneFilter]);
 
-  // ── Dept leaders filtered + grouped by department
-  const deptGrouped = useMemo(() => {
-    const filtered = (data?.deptLeaders ?? []).filter(l => {
-      const matchesSearch = !q || l.name.toLowerCase().includes(q) || l.email.toLowerCase().includes(q) || l.department.toLowerCase().includes(q);
+  const filteredDeptLeaders = useMemo(() => {
+    return (data?.deptLeaders ?? []).filter(l => {
       const matchesDept   = deptFilter === ALL || l.departmentId === deptFilter;
-      return matchesSearch && matchesDept;
+      const matchesSearch = !q
+        || l.name.toLowerCase().includes(q)
+        || l.email.toLowerCase().includes(q)
+        || l.department.toLowerCase().includes(q)
+        || l.assistants.some(a =>
+            a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q)
+          );
+      return matchesDept && matchesSearch;
     });
-
-    const grouped: Record<string, { deptName: string; leaders: typeof filtered; assistants: typeof filtered }> = {};
-    for (const l of filtered) {
-      if (!grouped[l.departmentId]) grouped[l.departmentId] = { deptName: l.department, leaders: [], assistants: [] };
-      if (l.isAssistant) grouped[l.departmentId].assistants.push(l);
-      else               grouped[l.departmentId].leaders.push(l);
-    }
-    return Object.entries(grouped).sort(([, a], [, b]) => a.deptName.localeCompare(b.deptName));
   }, [data?.deptLeaders, q, deptFilter]);
+
+  const totalDeptPeople = useMemo(() => {
+    return (data?.deptLeaders ?? []).reduce((sum, l) => sum + 1 + l.assistants.length, 0);
+  }, [data?.deptLeaders]);
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: 'zonal', label: 'Zonal Leaders', count: data?.zonalLeaders.length },
     { key: 'cell',  label: 'Cell Leaders',  count: data?.cellLeaders.length  },
-    { key: 'dept',  label: 'Dept Leaders',  count: data?.deptLeaders.length  }
+    { key: 'dept',  label: 'Dept Leaders',  count: totalDeptPeople }
   ];
 
   return (
@@ -177,7 +173,11 @@ const LeadersOverview = () => {
       {/* ── Search + filter bar ────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2 mt-3 mb-4">
         <Input
-          placeholder={tab === 'zonal' ? 'Search by name, email or zone…' : tab === 'cell' ? 'Search by name, email or cell…' : 'Search by name, email or department…'}
+          placeholder={
+            tab === 'zonal' ? 'Search by name, email or zone…'
+            : tab === 'cell' ? 'Search by name, email or cell…'
+            : 'Search by name, email or department…'
+          }
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="max-w-sm"
@@ -234,22 +234,36 @@ const LeadersOverview = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredZonal.map((l, i) => (
-                    <TableRow key={l.id}>
-                      <TableCell className="text-muted-foreground text-xs">{i + 1}</TableCell>
-                      <TableCell>
-                        <div className="font-medium">{l.name}</div>
-                        <div className="text-xs text-muted-foreground">{l.email}</div>
-                      </TableCell>
-                      <TableCell>{l.zone}</TableCell>
-                      <TableCell className="text-center">{l.cellCount}</TableCell>
-                      <TableCell className="text-center">{l.memberCount}</TableCell>
-                      <TableCell className="text-center"><PerfBadge value={l.performance.sundayPct}  present={l.performance.sundayPresent}  total={l.performance.total} /></TableCell>
-                      <TableCell className="text-center"><PerfBadge value={l.performance.tuesdayPct} present={l.performance.tuesdayPresent} total={l.performance.total} /></TableCell>
-                      <TableCell className="text-center"><PerfBadge value={l.performance.cellPct}    present={l.performance.cellPresent}    total={l.performance.total} /></TableCell>
-                      <TableCell><LastLogin ts={l.lastLogin} /></TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredZonal.map((l, i) => {
+                    const contrib = l.performance.contributingCells ?? 0;
+                    const allCells = l.cellCount;
+                    const partialData = contrib > 0 && contrib < allCells;
+                    return (
+                      <TableRow key={l.id}>
+                        <TableCell className="text-muted-foreground text-xs">{i + 1}</TableCell>
+                        <TableCell>
+                          <div className="font-medium">{l.name}</div>
+                          <div className="text-xs text-muted-foreground">{l.email}</div>
+                        </TableCell>
+                        <TableCell>{l.zone}</TableCell>
+                        <TableCell className="text-center">{l.cellCount}</TableCell>
+                        <TableCell className="text-center">{l.memberCount}</TableCell>
+                        <TableCell className="text-center">
+                          <PerfBadge value={l.performance.sundayPct}  present={l.performance.sundayPresent}  total={l.performance.total} />
+                          {partialData && (
+                            <div className="text-[9px] text-amber-600 mt-0.5 whitespace-nowrap">{contrib}/{allCells} cells</div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <PerfBadge value={l.performance.tuesdayPct} present={l.performance.tuesdayPresent} total={l.performance.total} />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <PerfBadge value={l.performance.cellPct}    present={l.performance.cellPresent}    total={l.performance.total} />
+                        </TableCell>
+                        <TableCell><LastLogin ts={l.lastLogin} /></TableCell>
+                      </TableRow>
+                    );
+                  })}
                   {filteredZonal.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={9} className="text-center h-24 text-muted-foreground">No results found.</TableCell>
@@ -315,17 +329,17 @@ const LeadersOverview = () => {
             </div>
           )}
 
-          {/* ── Dept tab — grouped by department ──────────────────────── */}
+          {/* ── Dept tab — tree: leader row + indented assistant rows ───── */}
           {tab === 'dept' && (
             <div className="space-y-6">
-              {deptGrouped.length === 0 ? (
+              {filteredDeptLeaders.length === 0 ? (
                 <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">No results found.</div>
-              ) : deptGrouped.map(([deptId, group]) => (
-                <div key={deptId}>
+              ) : filteredDeptLeaders.map(l => (
+                <div key={l.id}>
                   <h4 className="text-sm font-semibold mb-2 px-1 text-primary/80 uppercase tracking-wide">
-                    {group.deptName}
+                    {l.department}
                     <span className="ml-2 text-xs font-normal normal-case text-muted-foreground">
-                      ({group.leaders.length} leader{group.leaders.length !== 1 ? 's' : ''}, {group.assistants.length} assistant{group.assistants.length !== 1 ? 's' : ''})
+                      (1 leader{l.assistants.length > 0 ? `, ${l.assistants.length} assistant${l.assistants.length !== 1 ? 's' : ''}` : ''})
                     </span>
                   </h4>
                   <div className="rounded-md border overflow-x-auto">
@@ -344,21 +358,36 @@ const LeadersOverview = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {[...group.leaders, ...group.assistants].map(l => (
-                          <TableRow key={l.id + l.department}>
-                            <TableCell className="font-medium">{l.name}</TableCell>
-                            <TableCell>
-                              <Badge variant={l.isAssistant ? 'secondary' : 'default'} className="text-[10px]">
-                                {l.isAssistant ? 'Assistant' : 'Leader'}
-                              </Badge>
+                        {/* ── Leader row — full performance ── */}
+                        <TableRow className="bg-muted/30">
+                          <TableCell className="font-semibold">{l.name}</TableCell>
+                          <TableCell>
+                            <Badge variant="default" className="text-[10px]">Leader</Badge>
+                          </TableCell>
+                          <TableCell className="text-xs">{l.email}</TableCell>
+                          <TableCell className="text-xs">{l.phone}</TableCell>
+                          <TableCell className="text-center"><PerfBadge value={l.performance.sundayPct}  present={l.performance.sundayPresent}  total={l.performance.total} /></TableCell>
+                          <TableCell className="text-center"><PerfBadge value={l.performance.tuesdayPct} present={l.performance.tuesdayPresent} total={l.performance.total} /></TableCell>
+                          <TableCell className="text-center"><PerfBadge value={l.performance.cellPct}    present={l.performance.cellPresent}    total={l.performance.total} /></TableCell>
+                          <TableCell className="text-center text-xs">{l.performance.total ?? 0}</TableCell>
+                          <TableCell><LastLogin ts={l.lastLogin} /></TableCell>
+                        </TableRow>
+                        {/* ── Assistant sub-rows — personal details only, no performance ── */}
+                        {l.assistants.map(a => (
+                          <TableRow key={a.id} className="border-t-0">
+                            <TableCell className="pl-7 text-sm text-muted-foreground">
+                              <span className="mr-1.5 text-muted-foreground/50">└─</span>
+                              {a.name}
                             </TableCell>
-                            <TableCell className="text-xs">{l.email}</TableCell>
-                            <TableCell className="text-xs">{l.phone}</TableCell>
-                            <TableCell className="text-center"><PerfBadge value={l.performance.sundayPct}  present={l.performance.sundayPresent}  total={l.performance.total} /></TableCell>
-                            <TableCell className="text-center"><PerfBadge value={l.performance.tuesdayPct} present={l.performance.tuesdayPresent} total={l.performance.total} /></TableCell>
-                            <TableCell className="text-center"><PerfBadge value={l.performance.cellPct}    present={l.performance.cellPresent}    total={l.performance.total} /></TableCell>
-                            <TableCell className="text-center text-xs">{l.performance.total ?? l.performance.totalRecords}</TableCell>
-                            <TableCell><LastLogin ts={l.lastLogin} /></TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className="text-[10px]">Assistant</Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{a.email}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{a.phone}</TableCell>
+                            <TableCell colSpan={4} className="text-center text-xs text-muted-foreground italic">
+                              — attendance tracked under leader —
+                            </TableCell>
+                            <TableCell><LastLogin ts={a.lastLogin} /></TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

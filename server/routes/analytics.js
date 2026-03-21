@@ -823,14 +823,17 @@ router.get('/analytics/admin/leaders', async (req, res) => {
         }));
       }
 
-      // Dept perf per leader (Sun/Tue/CellMeeting from DepartmentAttendances)
+      // Dept perf per leader — COUNT FILTER per status (no additions)
       const deptPerfRes = await pool.query(`
         SELECT
-          da."DepartmentalLeaderId" AS user_id,
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct,
-          ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS cell_pct,
-          COUNT(*)::int AS total_records
+          da."DepartmentalLeaderId"                                                           AS user_id,
+          COUNT(*)                                                                  ::int     AS total,
+          COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)                        ::int     AS sunday_present,
+          COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)                        ::int     AS tuesday_present,
+          COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)                        ::int     AS cell_present,
+          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS sunday_pct,
+          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS tuesday_pct,
+          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS cell_pct
         FROM "DepartmentAttendances" da
         JOIN "Sunday"      s  ON da."SundayServiceId"  = s."Id"
         JOIN "Tuesday"     t  ON da."TuesdayServiceId" = t."Id"
@@ -842,10 +845,13 @@ router.get('/analytics/admin/leaders', async (req, res) => {
       const deptPerfMap = {};
       for (const r of deptPerfRes.rows) {
         deptPerfMap[r.user_id] = {
-          sundayPct: parseFloat(r.sunday_pct ?? 0),
-          tuesdayPct: parseFloat(r.tuesday_pct ?? 0),
-          cellPct: parseFloat(r.cell_pct ?? 0),
-          totalRecords: r.total_records
+          total:          r.total,
+          sundayPresent:  r.sunday_present,
+          tuesdayPresent: r.tuesday_present,
+          cellPresent:    r.cell_present,
+          sundayPct:      parseFloat(r.sunday_pct  ?? 0),
+          tuesdayPct:     parseFloat(r.tuesday_pct ?? 0),
+          cellPct:        parseFloat(r.cell_pct    ?? 0)
         };
       }
 
@@ -883,6 +889,7 @@ router.get('/analytics/admin/leaders', async (req, res) => {
       }
 
       // Zone perf per leader — COUNT FILTER per status (no additions)
+      // contributingCells = number of distinct cells that filed attendance records in period
       const zonePerfRes = await pool.query(`
         SELECT
           zl."UserId"                                                                          AS user_id,
@@ -890,6 +897,7 @@ router.get('/analytics/admin/leaders', async (req, res) => {
           COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)                         ::int     AS sunday_present,
           COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)                         ::int     AS tuesday_present,
           COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)                         ::int     AS cell_present,
+          COUNT(DISTINCT ca."CellId")                                               ::int     AS contributing_cells,
           ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS sunday_pct,
           ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS tuesday_pct,
           ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS cell_pct
@@ -905,14 +913,22 @@ router.get('/analytics/admin/leaders', async (req, res) => {
       const zonePerfMap = {};
       for (const r of zonePerfRes.rows) {
         zonePerfMap[r.user_id] = {
-          total:          r.total,
-          sundayPresent:  r.sunday_present,
-          tuesdayPresent: r.tuesday_present,
-          cellPresent:    r.cell_present,
-          sundayPct:      parseFloat(r.sunday_pct  ?? 0),
-          tuesdayPct:     parseFloat(r.tuesday_pct ?? 0),
-          cellPct:        parseFloat(r.cell_pct    ?? 0)
+          total:              r.total,
+          sundayPresent:      r.sunday_present,
+          tuesdayPresent:     r.tuesday_present,
+          cellPresent:        r.cell_present,
+          contributingCells:  r.contributing_cells,
+          sundayPct:          parseFloat(r.sunday_pct  ?? 0),
+          tuesdayPct:         parseFloat(r.tuesday_pct ?? 0),
+          cellPct:            parseFloat(r.cell_pct    ?? 0)
         };
+      }
+
+      // Build a lookup of assistants grouped by departmentId
+      const assistantsByDept = {};
+      for (const a of assistLeaders) {
+        if (!assistantsByDept[a.departmentId]) assistantsByDept[a.departmentId] = [];
+        assistantsByDept[a.departmentId].push({ id: a.id, name: a.name, email: a.email, phone: a.phone, lastLogin: a.lastLogin });
       }
 
       return {
@@ -920,27 +936,24 @@ router.get('/analytics/admin/leaders', async (req, res) => {
           id: u.Id, name: u.name, email: u.Email, phone: u.PhoneNumber, lastLogin: u.last_login,
           zone: u.zone_name, zoneId: u.zone_id,
           cellCount: u.cell_count, memberCount: u.member_count,
-          performance: zonePerfMap[u.Id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0 }
+          performance: zonePerfMap[u.Id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0, total: 0, sundayPresent: 0, tuesdayPresent: 0, cellPresent: 0, contributingCells: 0 }
         })),
         cellLeaders: cellRes.rows.map(u => ({
           id: u.Id, name: u.name, email: u.Email, phone: u.PhoneNumber, lastLogin: u.last_login,
           cell: u.cell_name, cellId: u.cell_id, zone: u.zone_name, zoneId: u.zone_id,
           isAssistant: u.IsAssistant, memberCount: u.member_count,
-          performance: cellPerfMap[u.Id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0 }
+          performance: cellPerfMap[u.Id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0, total: 0, sundayPresent: 0, tuesdayPresent: 0, cellPresent: 0 }
         })),
-        deptLeaders: [
-          ...deptsRes.rows
-            .filter(d => d.leader_id)
-            .map(d => ({
-              id: d.leader_id, name: d.leader_name, email: d.Email, phone: d.PhoneNumber,
-              lastLogin: d.UpdatedAt, department: d.dept_name, departmentId: d.dept_id, isAssistant: false,
-              performance: deptPerfMap[d.leader_id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0, totalRecords: 0 }
-            })),
-          ...assistLeaders.map(a => ({
-            ...a,
-            performance: deptPerfMap[a.id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0, totalRecords: 0 }
+        // deptLeaders: one entry per leader (no assistants in the flat list).
+        // Each entry carries an `assistants` array for tree rendering in the UI.
+        deptLeaders: deptsRes.rows
+          .filter(d => d.leader_id)
+          .map(d => ({
+            id: d.leader_id, name: d.leader_name, email: d.Email, phone: d.PhoneNumber,
+            lastLogin: d.UpdatedAt, department: d.dept_name, departmentId: d.dept_id,
+            performance: deptPerfMap[d.leader_id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0, total: 0, sundayPresent: 0, tuesdayPresent: 0, cellPresent: 0 },
+            assistants: assistantsByDept[d.dept_id] ?? []
           }))
-        ].sort((a, b) => a.department.localeCompare(b.department))
       };
     });
 
