@@ -1,24 +1,31 @@
-// import { useEffect } from 'react';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { routeTree } from './routeTree.gen';
 
-const router = createRouter({ routeTree });
+function DefaultNotFound() {
+  return (
+    <div className="flex h-svh flex-col items-center justify-center gap-2 text-muted-foreground">
+      <p className="text-lg font-semibold">Page not found</p>
+      <p className="text-sm">The page you are looking for does not exist.</p>
+    </div>
+  );
+}
+
+function DefaultError({ error }: { error: unknown }) {
+  const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
+  return (
+    <div className="flex h-svh flex-col items-center justify-center gap-2 text-muted-foreground">
+      <p className="text-lg font-semibold text-destructive">Something went wrong</p>
+      <p className="text-sm">{message}</p>
+    </div>
+  );
+}
+
+const router = createRouter({
+  routeTree,
+  defaultNotFoundComponent: DefaultNotFound,
+  defaultErrorComponent: DefaultError
+});
 
 export default function App() {
-  // useEffect(() => {
-  //   const s1 = document.createElement('script');
-  //   s1.async = true;
-  //   s1.src = 'https://embed.tawk.to/68af7a3786519f192da616a8/1j3mnaqno';
-  //   s1.charset = 'UTF-8';
-  //   s1.setAttribute('crossorigin', '*');
-
-  //   const s0 = document.getElementsByTagName('script')[0];
-  //   s0.parentNode?.insertBefore(s1, s0);
-
-  //   return () => {
-  //     s1.remove(); // cleanup on unmount
-  //   };
-  // }, []);
-
   return <RouterProvider router={router} />;
 }

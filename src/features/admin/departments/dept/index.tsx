@@ -13,7 +13,7 @@ const Departments = () => {
     AppConfigStore: { toggleModals }
   } = useStore();
 
-  const { data, isLoading } = useFetchAllDepartmentsWithPeople();
+  const { data, isLoading, status } = useFetchAllDepartmentsWithPeople();
 
   return (
     <Main>
@@ -27,21 +27,14 @@ const Departments = () => {
             <Skeleton className="h-8 w-24" />
             <Skeleton className="h-8 w-24" />
           </div>
-
           <Skeleton className="h-[50svh] w-full" />
+        </div>
+      ) : status === 'error' ? (
+        <div className="flex h-60 flex-col items-center justify-center gap-2 text-muted-foreground">
+          <p className="text-sm">Could not load service units. The server may be starting up — please try again shortly.</p>
         </div>
       ) : (
         <div className="flex flex-col justify-between space-y-3">
-          {/* <div className="flex w-full justify-end">
-            <Button
-              onClick={() => toggleModals({ name: AppModals.CREATE_ZONE, open: true })}
-              className="space-x-1"
-            >
-              <span>Create new zone</span> <IconPlus size={18} />
-            </Button>
-          </div> */}
-
-          {/* ✅ PASS AN ARRAY ALWAYS */}
           <UnitsTable placeholder="search units..." data={data ?? []} />
         </div>
       )}
