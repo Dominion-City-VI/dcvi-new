@@ -30,15 +30,26 @@ const PERIODS = [
   { label: 'Last Year', value: '3' }
 ];
 
-function PerfBadge({ value }: { value: number }) {
+function PerfBadge({ value, present, total }: { value: number; present?: number; total?: number }) {
+  const title = present !== undefined && total !== undefined
+    ? `${present} present out of ${total} records`
+    : undefined;
   return (
-    <span className={cn(
-      'inline-block rounded px-1.5 py-0.5 text-[11px] font-semibold',
-      value >= 75 ? 'bg-green-100 text-green-700' :
-      value >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
-    )}>
-      {value.toFixed(1)}%
-    </span>
+    <div className="flex flex-col items-center gap-0.5">
+      <span
+        title={title}
+        className={cn(
+          'inline-block rounded px-1.5 py-0.5 text-[11px] font-semibold cursor-default',
+          value >= 75 ? 'bg-green-100 text-green-700' :
+          value >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+        )}
+      >
+        {value.toFixed(1)}%
+      </span>
+      {present !== undefined && total !== undefined && (
+        <span className="text-[9px] text-muted-foreground leading-none">{present}/{total}</span>
+      )}
+    </div>
   );
 }
 
@@ -233,9 +244,9 @@ const LeadersOverview = () => {
                       <TableCell>{l.zone}</TableCell>
                       <TableCell className="text-center">{l.cellCount}</TableCell>
                       <TableCell className="text-center">{l.memberCount}</TableCell>
-                      <TableCell className="text-center"><PerfBadge value={l.performance.sundayPct} /></TableCell>
-                      <TableCell className="text-center"><PerfBadge value={l.performance.tuesdayPct} /></TableCell>
-                      <TableCell className="text-center"><PerfBadge value={l.performance.cellPct} /></TableCell>
+                      <TableCell className="text-center"><PerfBadge value={l.performance.sundayPct}  present={l.performance.sundayPresent}  total={l.performance.total} /></TableCell>
+                      <TableCell className="text-center"><PerfBadge value={l.performance.tuesdayPct} present={l.performance.tuesdayPresent} total={l.performance.total} /></TableCell>
+                      <TableCell className="text-center"><PerfBadge value={l.performance.cellPct}    present={l.performance.cellPresent}    total={l.performance.total} /></TableCell>
                       <TableCell><LastLogin ts={l.lastLogin} /></TableCell>
                     </TableRow>
                   ))}
@@ -290,9 +301,9 @@ const LeadersOverview = () => {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-center">{l.memberCount}</TableCell>
-                            <TableCell className="text-center"><PerfBadge value={l.performance.sundayPct} /></TableCell>
-                            <TableCell className="text-center"><PerfBadge value={l.performance.tuesdayPct} /></TableCell>
-                            <TableCell className="text-center"><PerfBadge value={l.performance.cellPct} /></TableCell>
+                            <TableCell className="text-center"><PerfBadge value={l.performance.sundayPct}  present={l.performance.sundayPresent}  total={l.performance.total} /></TableCell>
+                            <TableCell className="text-center"><PerfBadge value={l.performance.tuesdayPct} present={l.performance.tuesdayPresent} total={l.performance.total} /></TableCell>
+                            <TableCell className="text-center"><PerfBadge value={l.performance.cellPct}    present={l.performance.cellPresent}    total={l.performance.total} /></TableCell>
                             <TableCell><LastLogin ts={l.lastLogin} /></TableCell>
                           </TableRow>
                         ))}
@@ -343,10 +354,10 @@ const LeadersOverview = () => {
                             </TableCell>
                             <TableCell className="text-xs">{l.email}</TableCell>
                             <TableCell className="text-xs">{l.phone}</TableCell>
-                            <TableCell className="text-center"><PerfBadge value={l.performance.sundayPct} /></TableCell>
-                            <TableCell className="text-center"><PerfBadge value={l.performance.tuesdayPct} /></TableCell>
-                            <TableCell className="text-center"><PerfBadge value={l.performance.cellPct} /></TableCell>
-                            <TableCell className="text-center text-xs">{l.performance.totalRecords}</TableCell>
+                            <TableCell className="text-center"><PerfBadge value={l.performance.sundayPct}  present={l.performance.sundayPresent}  total={l.performance.total} /></TableCell>
+                            <TableCell className="text-center"><PerfBadge value={l.performance.tuesdayPct} present={l.performance.tuesdayPresent} total={l.performance.total} /></TableCell>
+                            <TableCell className="text-center"><PerfBadge value={l.performance.cellPct}    present={l.performance.cellPresent}    total={l.performance.total} /></TableCell>
+                            <TableCell className="text-center text-xs">{l.performance.total ?? l.performance.totalRecords}</TableCell>
                             <TableCell><LastLogin ts={l.lastLogin} /></TableCell>
                           </TableRow>
                         ))}

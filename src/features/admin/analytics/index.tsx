@@ -32,10 +32,15 @@ const COLORS = {
   sunday:  '#6366f1',
   tuesday: '#22c55e',
   cell:    '#f59e0b',
-  overall: '#8b5cf6'
 };
 
-function KpiCard({ label, value, sub, color }: { label: string; value: number | string; sub?: string; color?: string }) {
+function pctColor(v: number) {
+  return v >= 75 ? 'text-green-600' : v >= 50 ? 'text-yellow-600' : 'text-red-600';
+}
+
+function KpiCard({ label, value, sub, color }: {
+  label: string; value: number | string; sub?: string; color?: string;
+}) {
   return (
     <div className="rounded-lg border bg-card p-4 flex flex-col gap-1 shadow-sm">
       <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
@@ -45,9 +50,18 @@ function KpiCard({ label, value, sub, color }: { label: string; value: number | 
   );
 }
 
-function PctCard({ label, value }: { label: string; value: number }) {
-  const color = value >= 75 ? 'text-green-600' : value >= 50 ? 'text-yellow-600' : 'text-red-600';
-  return <KpiCard label={label} value={`${value.toFixed(1)}%`} color={color} />;
+function PctCard({ label, value, present, total }: {
+  label: string; value: number; present?: number; total?: number;
+}) {
+  return (
+    <div className="rounded-lg border bg-card p-4 flex flex-col gap-1 shadow-sm">
+      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
+      <p className={cn('text-3xl font-bold', pctColor(value))}>{value.toFixed(1)}%</p>
+      {present !== undefined && total !== undefined && (
+        <p className="text-xs text-muted-foreground">{present.toLocaleString()} present / {total.toLocaleString()} records</p>
+      )}
+    </div>
+  );
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -129,18 +143,18 @@ const AdminAnalytics = () => {
       {/* ── Cell KPIs ─────────────────────────────────────────────────── */}
       <SectionTitle>Cell Attendance KPIs</SectionTitle>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <PctCard label="Sunday Service"     value={cellKpi.sundayPct}  />
-        <PctCard label="Tuesday Service"    value={cellKpi.tuesdayPct} />
-        <PctCard label="Cell Meeting (Fri)" value={cellKpi.cellPct}    />
+        <PctCard label="Sunday Service"     value={cellKpi.sundayPct}  present={cellKpi.sundayPresent}  total={cellKpi.total} />
+        <PctCard label="Tuesday Service"    value={cellKpi.tuesdayPct} present={cellKpi.tuesdayPresent} total={cellKpi.total} />
+        <PctCard label="Cell Meeting (Fri)" value={cellKpi.cellPct}    present={cellKpi.cellPresent}    total={cellKpi.total} />
         <KpiCard label="Total Records" value={cellKpi.total.toLocaleString()} sub="Cell attendance records" />
       </div>
 
       {/* ── Dept KPIs ─────────────────────────────────────────────────── */}
       <SectionTitle>Department Attendance KPIs</SectionTitle>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <PctCard label="Sunday Service"     value={deptKpi.sundayPct}  />
-        <PctCard label="Tuesday Service"    value={deptKpi.tuesdayPct} />
-        <PctCard label="Cell Meeting (Fri)" value={deptKpi.cellPct}    />
+        <PctCard label="Sunday Service"     value={deptKpi.sundayPct}  present={deptKpi.sundayPresent}  total={deptKpi.total} />
+        <PctCard label="Tuesday Service"    value={deptKpi.tuesdayPct} present={deptKpi.tuesdayPresent} total={deptKpi.total} />
+        <PctCard label="Cell Meeting (Fri)" value={deptKpi.cellPct}    present={deptKpi.cellPresent}    total={deptKpi.total} />
         <KpiCard label="Total Records" value={deptKpi.total.toLocaleString()} sub="Dept attendance records" />
       </div>
 
@@ -151,7 +165,7 @@ const AdminAnalytics = () => {
           <RadarChart data={radarData}>
             <PolarGrid />
             <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11 }} />
-            <Radar name="%" dataKey="value" stroke={COLORS.overall} fill={COLORS.overall} fillOpacity={0.35} />
+            <Radar name="%" dataKey="value" stroke={COLORS.sunday} fill={COLORS.sunday} fillOpacity={0.35} />
             <Tooltip formatter={(v: number) => `${v}%`} />
           </RadarChart>
         </ResponsiveContainer>
@@ -181,7 +195,16 @@ const AdminAnalytics = () => {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                 <YAxis unit="%" tick={{ fontSize: 11 }} domain={[0, 100]} />
-                <Tooltip formatter={(v: number) => `${v}%`} />
+                <Tooltip
+                  formatter={(v: number, name: string, props: { payload?: TAttTrendPoint }) => {
+                    const row = props.payload;
+                    if (!row) return [`${v}%`, name];
+                    if (name === 'Sunday')   return [`${v}% (${row.sundayPresent}/${row.total})`, name];
+                    if (name === 'Tuesday')  return [`${v}% (${row.tuesdayPresent}/${row.total})`, name];
+                    if (name === 'Cell Mtg') return [`${v}% (${row.cellPresent}/${row.total})`, name];
+                    return [`${v}%`, name];
+                  }}
+                />
                 <Legend />
                 <Area type="monotone" dataKey="sundayPct"  name="Sunday"  stroke={COLORS.sunday}  fill="url(#gSun)"  strokeWidth={2} dot={false} />
                 <Area type="monotone" dataKey="tuesdayPct" name="Tuesday" stroke={COLORS.tuesday} fill="url(#gTue)"  strokeWidth={2} dot={false} />
@@ -232,11 +255,20 @@ const AdminAnalytics = () => {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                 <YAxis unit="%" tick={{ fontSize: 11 }} domain={[0, 100]} />
-                <Tooltip formatter={(v: number) => `${v}%`} />
+                <Tooltip
+                  formatter={(v: number, name: string, props: { payload?: TAttTrendPoint }) => {
+                    const row = props.payload;
+                    if (!row) return [`${v}%`, name];
+                    if (name === 'Sunday')        return [`${v}% (${row.sundayPresent}/${row.total})`, name];
+                    if (name === 'Tuesday')       return [`${v}% (${row.tuesdayPresent}/${row.total})`, name];
+                    if (name === 'Friday (Cell)') return [`${v}% (${row.cellPresent}/${row.total})`, name];
+                    return [`${v}%`, name];
+                  }}
+                />
                 <Legend />
                 <Area type="monotone" dataKey="sundayPct"  name="Sunday"       stroke={COLORS.sunday}  fill="url(#dSun)"  strokeWidth={2} dot={false} />
                 <Area type="monotone" dataKey="tuesdayPct" name="Tuesday"      stroke={COLORS.tuesday} fill="url(#dTue)"  strokeWidth={2} dot={false} />
-                <Area type="monotone" dataKey="cellPct"    name="Friday (Cell Mtg)" stroke={COLORS.cell}   fill="url(#dCell)" strokeWidth={2} dot={false} />
+                <Area type="monotone" dataKey="cellPct"    name="Friday (Cell)" stroke={COLORS.cell}   fill="url(#dCell)" strokeWidth={2} dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -244,14 +276,23 @@ const AdminAnalytics = () => {
       )}
 
       {/* ── Zone performance ─────────────────────────────────────────── */}
-      <SectionTitle>Zone Performance — All Zones</SectionTitle>
+      <SectionTitle>Zone Performance — All Zones (sorted by Sunday %)</SectionTitle>
       <div className="rounded-lg border bg-card p-4 shadow-sm h-80">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={zonePerformance} layout="vertical" margin={{ top: 4, right: 40, bottom: 4, left: 60 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis type="number" unit="%" domain={[0, 100]} tick={{ fontSize: 11 }} />
             <YAxis type="category" dataKey="zone" tick={{ fontSize: 11 }} width={90} />
-            <Tooltip formatter={(v: number) => `${v}%`} />
+            <Tooltip
+              formatter={(v: number, name: string, props: { payload?: TZonePerfItem }) => {
+                const row = props.payload;
+                if (!row || !row.total) return [`${v}%`, name];
+                if (name === 'Sunday')   return [`${v}% (${row.sundayPresent}/${row.total} records)`, name];
+                if (name === 'Tuesday')  return [`${v}% (${row.tuesdayPresent}/${row.total} records)`, name];
+                if (name === 'Cell Mtg') return [`${v}% (${row.cellPresent}/${row.total} records)`, name];
+                return [`${v}%`, name];
+              }}
+            />
             <Legend />
             <Bar dataKey="sundayPct"  name="Sunday"  fill={COLORS.sunday}  radius={[0,3,3,0]} />
             <Bar dataKey="tuesdayPct" name="Tuesday" fill={COLORS.tuesday} radius={[0,3,3,0]} />
@@ -263,14 +304,19 @@ const AdminAnalytics = () => {
       {/* ── Top / Bottom zones ───────────────────────────────────────── */}
       <div className="grid md:grid-cols-2 gap-4 mt-6">
         <div>
-          <h4 className="text-sm font-semibold mb-2 text-green-700">Top 5 Zones</h4>
+          <h4 className="text-sm font-semibold mb-2 text-green-700">Top 5 Zones — Sunday %</h4>
           <div className="space-y-2">
             {top5Zones.map((z, i) => (
-              <div key={z.zoneId} className="flex items-center justify-between rounded border px-3 py-2 bg-card text-sm">
-                <span className="font-medium">#{i+1} {z.zone}</span>
-                <span className={cn('font-bold', z.overallPct >= 75 ? 'text-green-600' : z.overallPct >= 50 ? 'text-yellow-600' : 'text-red-600')}>
-                  {z.overallPct.toFixed(1)}%
-                </span>
+              <div key={z.zoneId} className="rounded border px-3 py-2 bg-card text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">#{i+1} {z.zone}</span>
+                  <span className={cn('font-bold', pctColor(z.sundayPct))}>{z.sundayPct.toFixed(1)}%</span>
+                </div>
+                {z.total > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {z.sundayPresent} present / {z.total} records — {z.cells} cells, {z.members} members
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -278,12 +324,17 @@ const AdminAnalytics = () => {
         <div>
           <h4 className="text-sm font-semibold mb-2 text-red-700">Bottom 5 Zones (need attention)</h4>
           <div className="space-y-2">
-            {bottom5Zones.map((z, i) => (
-              <div key={z.zoneId} className="flex items-center justify-between rounded border px-3 py-2 bg-card text-sm">
-                <span className="font-medium">{z.zone}</span>
-                <span className={cn('font-bold', z.overallPct >= 75 ? 'text-green-600' : z.overallPct >= 50 ? 'text-yellow-600' : 'text-red-600')}>
-                  {z.overallPct.toFixed(1)}%
-                </span>
+            {bottom5Zones.map((z) => (
+              <div key={z.zoneId} className="rounded border px-3 py-2 bg-card text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{z.zone}</span>
+                  <span className={cn('font-bold', pctColor(z.sundayPct))}>{z.sundayPct.toFixed(1)}%</span>
+                </div>
+                {z.total > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {z.sundayPresent} present / {z.total} records — {z.cells} cells, {z.members} members
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -291,18 +342,27 @@ const AdminAnalytics = () => {
       </div>
 
       {/* ── Dept performance ─────────────────────────────────────────── */}
-      <SectionTitle>Department Performance — All Departments</SectionTitle>
+      <SectionTitle>Department Performance — All Departments (sorted by Sunday %)</SectionTitle>
       <div className="rounded-lg border bg-card p-4 shadow-sm h-96">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={deptPerformance} layout="vertical" margin={{ top: 4, right: 40, bottom: 4, left: 100 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis type="number" unit="%" domain={[0, 100]} tick={{ fontSize: 11 }} />
             <YAxis type="category" dataKey="dept" tick={{ fontSize: 10 }} width={130} />
-            <Tooltip formatter={(v: number) => `${v}%`} />
+            <Tooltip
+              formatter={(v: number, name: string, props: { payload?: TDeptPerfItem }) => {
+                const row = props.payload;
+                if (!row || !row.total) return [`${v}%`, name];
+                if (name === 'Sunday')       return [`${v}% (${row.sundayPresent}/${row.total} records)`, name];
+                if (name === 'Tuesday')      return [`${v}% (${row.tuesdayPresent}/${row.total} records)`, name];
+                if (name === 'Friday (Cell)') return [`${v}% (${row.cellPresent}/${row.total} records)`, name];
+                return [`${v}%`, name];
+              }}
+            />
             <Legend />
             <Bar dataKey="sundayPct"  name="Sunday"       fill={COLORS.sunday}  radius={[0,3,3,0]} />
             <Bar dataKey="tuesdayPct" name="Tuesday"      fill={COLORS.tuesday} radius={[0,3,3,0]} />
-            <Bar dataKey="cellPct"    name="Fri (Cell Mtg)" fill={COLORS.cell}  radius={[0,3,3,0]} />
+            <Bar dataKey="cellPct"    name="Friday (Cell)" fill={COLORS.cell}   radius={[0,3,3,0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -310,14 +370,19 @@ const AdminAnalytics = () => {
       {/* ── Top / Bottom depts ───────────────────────────────────────── */}
       <div className="grid md:grid-cols-2 gap-4 mt-6 mb-8">
         <div>
-          <h4 className="text-sm font-semibold mb-2 text-green-700">Top 5 Departments</h4>
+          <h4 className="text-sm font-semibold mb-2 text-green-700">Top 5 Departments — Sunday %</h4>
           <div className="space-y-2">
             {top5Depts.map((d, i) => (
-              <div key={d.deptId} className="flex items-center justify-between rounded border px-3 py-2 bg-card text-sm">
-                <span className="font-medium">#{i+1} {d.dept}</span>
-                <span className={cn('font-bold', d.overallPct >= 75 ? 'text-green-600' : d.overallPct >= 50 ? 'text-yellow-600' : 'text-red-600')}>
-                  {d.overallPct.toFixed(1)}%
-                </span>
+              <div key={d.deptId} className="rounded border px-3 py-2 bg-card text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">#{i+1} {d.dept}</span>
+                  <span className={cn('font-bold', pctColor(d.sundayPct))}>{d.sundayPct.toFixed(1)}%</span>
+                </div>
+                {d.total > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {d.sundayPresent} present / {d.total} records
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -326,11 +391,16 @@ const AdminAnalytics = () => {
           <h4 className="text-sm font-semibold mb-2 text-red-700">Bottom 5 Departments (need attention)</h4>
           <div className="space-y-2">
             {bottom5Depts.map((d) => (
-              <div key={d.deptId} className="flex items-center justify-between rounded border px-3 py-2 bg-card text-sm">
-                <span className="font-medium">{d.dept}</span>
-                <span className={cn('font-bold', d.overallPct >= 75 ? 'text-green-600' : d.overallPct >= 50 ? 'text-yellow-600' : 'text-red-600')}>
-                  {d.overallPct.toFixed(1)}%
-                </span>
+              <div key={d.deptId} className="rounded border px-3 py-2 bg-card text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{d.dept}</span>
+                  <span className={cn('font-bold', pctColor(d.sundayPct))}>{d.sundayPct.toFixed(1)}%</span>
+                </div>
+                {d.total > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {d.sundayPresent} present / {d.total} records
+                  </p>
+                )}
               </div>
             ))}
           </div>

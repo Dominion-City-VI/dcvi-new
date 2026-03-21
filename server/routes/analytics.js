@@ -849,13 +849,17 @@ router.get('/analytics/admin/leaders', async (req, res) => {
         };
       }
 
-      // Cell perf per leader
+      // Cell perf per leader — COUNT FILTER per status (no additions)
       const cellPerfRes = await pool.query(`
         SELECT
-          cl."UserId" AS user_id,
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct,
-          ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS cell_pct
+          cl."UserId"                                                                          AS user_id,
+          COUNT(*)                                                                   ::int     AS total,
+          COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)                         ::int     AS sunday_present,
+          COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)                         ::int     AS tuesday_present,
+          COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)                         ::int     AS cell_present,
+          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS sunday_pct,
+          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS tuesday_pct,
+          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS cell_pct
         FROM "CellLeaders" cl
         JOIN "CellAttendance" ca ON ca."CellId" = cl."CellId"
         JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
@@ -867,16 +871,28 @@ router.get('/analytics/admin/leaders', async (req, res) => {
 
       const cellPerfMap = {};
       for (const r of cellPerfRes.rows) {
-        cellPerfMap[r.user_id] = { sundayPct: parseFloat(r.sunday_pct ?? 0), tuesdayPct: parseFloat(r.tuesday_pct ?? 0), cellPct: parseFloat(r.cell_pct ?? 0) };
+        cellPerfMap[r.user_id] = {
+          total:          r.total,
+          sundayPresent:  r.sunday_present,
+          tuesdayPresent: r.tuesday_present,
+          cellPresent:    r.cell_present,
+          sundayPct:      parseFloat(r.sunday_pct  ?? 0),
+          tuesdayPct:     parseFloat(r.tuesday_pct ?? 0),
+          cellPct:        parseFloat(r.cell_pct    ?? 0)
+        };
       }
 
-      // Zone perf per leader
+      // Zone perf per leader — COUNT FILTER per status (no additions)
       const zonePerfRes = await pool.query(`
         SELECT
-          zl."UserId" AS user_id,
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct,
-          ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS cell_pct
+          zl."UserId"                                                                          AS user_id,
+          COUNT(*)                                                                   ::int     AS total,
+          COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)                         ::int     AS sunday_present,
+          COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)                         ::int     AS tuesday_present,
+          COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)                         ::int     AS cell_present,
+          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS sunday_pct,
+          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS tuesday_pct,
+          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS cell_pct
         FROM "ZonalLeaders" zl
         JOIN "CellAttendance" ca ON ca."ZoneId" = zl."ZoneId"
         JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
@@ -888,7 +904,15 @@ router.get('/analytics/admin/leaders', async (req, res) => {
 
       const zonePerfMap = {};
       for (const r of zonePerfRes.rows) {
-        zonePerfMap[r.user_id] = { sundayPct: parseFloat(r.sunday_pct ?? 0), tuesdayPct: parseFloat(r.tuesday_pct ?? 0), cellPct: parseFloat(r.cell_pct ?? 0) };
+        zonePerfMap[r.user_id] = {
+          total:          r.total,
+          sundayPresent:  r.sunday_present,
+          tuesdayPresent: r.tuesday_present,
+          cellPresent:    r.cell_present,
+          sundayPct:      parseFloat(r.sunday_pct  ?? 0),
+          tuesdayPct:     parseFloat(r.tuesday_pct ?? 0),
+          cellPct:        parseFloat(r.cell_pct    ?? 0)
+        };
       }
 
       return {
@@ -929,7 +953,10 @@ router.get('/analytics/admin/leaders', async (req, res) => {
 
 // ─── Admin Overview Analytics ────────────────────────────────────────────────
 // GET /analytics/admin/overview?period=3
-// Returns comprehensive analytics: KPIs, trends, zone/dept performance rankings.
+// Rewritten to use LATERAL subqueries — avoids Zones × Members × CellAttendance
+// Cartesian product that causes PostgreSQL to write huge temp files.
+// Percentages: COUNT(status=1) / COUNT(total) independently per service.
+// No cross-service additions used.
 router.get('/analytics/admin/overview', async (req, res) => {
   try {
     const { period = '3' } = req.query;
@@ -938,14 +965,17 @@ router.get('/analytics/admin/overview', async (req, res) => {
     const data = await cached(key, async () => {
       const dateFrom = getDateFrom(period);
 
-      // --- Cell attendance KPIs ---
+      // ── 1. Overall KPIs + static counts (all fast, no cross-product) ─────
       const [cellKpiRes, deptKpiRes, countsRes] = await Promise.all([
         pool.query(`
           SELECT
-            ROUND(COUNT(CASE WHEN s."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
-            ROUND(COUNT(CASE WHEN t."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct,
-            ROUND(COUNT(CASE WHEN cm."AttendanceStatus"= 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS cell_pct,
-            COUNT(*)::int AS total
+            COUNT(*)                                                      ::int  AS total,
+            COUNT(*) FILTER (WHERE s."AttendanceStatus" = 1)             ::int  AS sunday_present,
+            COUNT(*) FILTER (WHERE t."AttendanceStatus" = 1)             ::int  AS tuesday_present,
+            COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)            ::int  AS cell_present,
+            ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS sunday_pct,
+            ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS tuesday_pct,
+            ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS cell_pct
           FROM "CellAttendance" ca
           JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
           JOIN "Tuesday"     t  ON ca."TuesdayServiceId" = t."Id"
@@ -954,10 +984,13 @@ router.get('/analytics/admin/overview', async (req, res) => {
         `, [dateFrom]),
         pool.query(`
           SELECT
-            ROUND(COUNT(CASE WHEN s."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
-            ROUND(COUNT(CASE WHEN t."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct,
-            ROUND(COUNT(CASE WHEN cm."AttendanceStatus"= 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS cell_pct,
-            COUNT(*)::int AS total
+            COUNT(*)                                                      ::int  AS total,
+            COUNT(*) FILTER (WHERE s."AttendanceStatus" = 1)             ::int  AS sunday_present,
+            COUNT(*) FILTER (WHERE t."AttendanceStatus" = 1)             ::int  AS tuesday_present,
+            COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)            ::int  AS cell_present,
+            ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS sunday_pct,
+            ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS tuesday_pct,
+            ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS cell_pct
           FROM "DepartmentAttendances" da
           JOIN "Sunday"      s  ON da."SundayServiceId"  = s."Id"
           JOIN "Tuesday"     t  ON da."TuesdayServiceId" = t."Id"
@@ -966,25 +999,25 @@ router.get('/analytics/admin/overview', async (req, res) => {
         `, [dateFrom]),
         pool.query(`
           SELECT
-            (SELECT COUNT(*) FROM "Members")::int  AS members,
-            (SELECT COUNT(*) FROM "Cells")::int    AS cells,
-            (SELECT COUNT(*) FROM "Zones")::int    AS zones,
+            (SELECT COUNT(*) FROM "Members")::int     AS members,
+            (SELECT COUNT(*) FROM "Cells")::int       AS cells,
+            (SELECT COUNT(*) FROM "Zones")::int       AS zones,
             (SELECT COUNT(*) FROM "Departments")::int AS depts
         `)
       ]);
 
-      // --- Monthly trend (cell attendance) ---
+      // ── 2. Monthly cell attendance trend ───────────────────────────────
       const trendRes = await pool.query(`
         SELECT
-          to_char(date_trunc('month', s."SundayService"), 'Mon YYYY') AS label,
-          date_trunc('month', s."SundayService") AS sort_key,
-          COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)::int AS sunday_present,
-          COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)::int AS tuesday_present,
-          COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)::int AS cell_present,
-          COUNT(*)::int AS total,
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),1) AS sunday_pct,
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),1) AS tuesday_pct,
-          ROUND(COUNT(CASE WHEN cm."AttendanceStatus"= 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),1) AS cell_pct
+          to_char(date_trunc('month', s."SundayService"), 'Mon YYYY')    AS label,
+          date_trunc('month', s."SundayService")                         AS sort_key,
+          COUNT(*)                                               ::int    AS total,
+          COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)    ::int    AS sunday_present,
+          COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)    ::int    AS tuesday_present,
+          COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)    ::int    AS cell_present,
+          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 1) AS sunday_pct,
+          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 1) AS tuesday_pct,
+          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*), 0), 1) AS cell_pct
         FROM "CellAttendance" ca
         JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
         JOIN "Tuesday"     t  ON ca."TuesdayServiceId" = t."Id"
@@ -994,18 +1027,18 @@ router.get('/analytics/admin/overview', async (req, res) => {
         ORDER BY sort_key ASC
       `, [dateFrom]);
 
-      // --- Dept monthly trend ---
+      // ── 3. Monthly dept attendance trend ──────────────────────────────
       const deptTrendRes = await pool.query(`
         SELECT
-          to_char(date_trunc('month', s."SundayService"), 'Mon YYYY') AS label,
-          date_trunc('month', s."SundayService") AS sort_key,
-          COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)::int AS sunday_present,
-          COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)::int AS tuesday_present,
-          COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)::int AS cell_present,
-          COUNT(*)::int AS total,
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),1) AS sunday_pct,
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),1) AS tuesday_pct,
-          ROUND(COUNT(CASE WHEN cm."AttendanceStatus"= 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),1) AS cell_pct
+          to_char(date_trunc('month', s."SundayService"), 'Mon YYYY')    AS label,
+          date_trunc('month', s."SundayService")                         AS sort_key,
+          COUNT(*)                                               ::int    AS total,
+          COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)    ::int    AS sunday_present,
+          COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)    ::int    AS tuesday_present,
+          COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)    ::int    AS cell_present,
+          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 1) AS sunday_pct,
+          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 1) AS tuesday_pct,
+          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*), 0), 1) AS cell_pct
         FROM "DepartmentAttendances" da
         JOIN "Sunday"      s  ON da."SundayServiceId"  = s."Id"
         JOIN "Tuesday"     t  ON da."TuesdayServiceId" = t."Id"
@@ -1015,51 +1048,76 @@ router.get('/analytics/admin/overview', async (req, res) => {
         ORDER BY sort_key ASC
       `, [dateFrom]);
 
-      // --- Zone performance ---
+      // ── 4. Zone performance — LATERAL avoids Members × CellAttendance ─
+      // For each zone we independently count its CellAttendance records.
+      // Member and cell counts come from scalar subqueries (no cross-product).
       const zonePerfRes = await pool.query(`
         SELECT
-          z."Name" AS zone,
-          z."Id"   AS zone_id,
-          COUNT(DISTINCT m."Id")::int AS members,
-          COUNT(DISTINCT c."Id")::int AS cells,
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(ca.*),0),1) AS sunday_pct,
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(ca.*),0),1) AS tuesday_pct,
-          ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(ca.*),0),1) AS cell_pct,
-          ROUND((COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)+COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END)+COUNT(CASE WHEN cm."AttendanceStatus"=1 THEN 1 END))*100.0/NULLIF(COUNT(ca.*)*3,0),1) AS overall_pct
+          z."Name"                                                                            AS zone,
+          z."Id"                                                                              AS zone_id,
+          (SELECT COUNT(*) FROM "Members" m WHERE m."ZoneId" = z."Id")::int                 AS members,
+          (SELECT COUNT(*) FROM "Cells"   c WHERE c."ZoneId" = z."Id")::int                 AS cells,
+          COALESCE(att.total, 0)                                                              AS total,
+          COALESCE(att.sunday_present, 0)                                                    AS sunday_present,
+          COALESCE(att.tuesday_present, 0)                                                   AS tuesday_present,
+          COALESCE(att.cell_present, 0)                                                      AS cell_present,
+          CASE WHEN COALESCE(att.total, 0) = 0 THEN 0
+               ELSE ROUND(att.sunday_present  * 100.0 / att.total, 1) END                   AS sunday_pct,
+          CASE WHEN COALESCE(att.total, 0) = 0 THEN 0
+               ELSE ROUND(att.tuesday_present * 100.0 / att.total, 1) END                   AS tuesday_pct,
+          CASE WHEN COALESCE(att.total, 0) = 0 THEN 0
+               ELSE ROUND(att.cell_present    * 100.0 / att.total, 1) END                   AS cell_pct
         FROM "Zones" z
-        LEFT JOIN "Cells"          c  ON c."ZoneId"           = z."Id"
-        LEFT JOIN "Members"        m  ON m."ZoneId"           = z."Id"
-        LEFT JOIN "CellAttendance" ca ON ca."ZoneId"          = z."Id"
-        LEFT JOIN "Sunday"         s  ON ca."SundayServiceId" = s."Id" AND s."SundayService" >= $1
-        LEFT JOIN "Tuesday"        t  ON ca."TuesdayServiceId"= t."Id"
-        LEFT JOIN "CellMeeting"    cm ON ca."CellMeetingId"   = cm."Id"
-        GROUP BY z."Id", z."Name"
-        ORDER BY overall_pct DESC NULLS LAST
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*)                                                 ::int AS total,
+            COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)       ::int AS sunday_present,
+            COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)       ::int AS tuesday_present,
+            COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)       ::int AS cell_present
+          FROM "CellAttendance" ca
+          JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id" AND s."SundayService" >= $1
+          JOIN "Tuesday"     t  ON ca."TuesdayServiceId" = t."Id"
+          JOIN "CellMeeting" cm ON ca."CellMeetingId"    = cm."Id"
+          WHERE ca."ZoneId" = z."Id"
+        ) att ON true
+        ORDER BY sunday_pct DESC NULLS LAST
       `, [dateFrom]);
 
-      // --- Dept performance ---
+      // ── 5. Dept performance — LATERAL subquery, no cross-product ──────
       const deptPerfRes = await pool.query(`
         SELECT
-          d."Name" AS dept,
-          d."Id"   AS dept_id,
+          d."Name"                                                                            AS dept,
+          d."Id"                                                                              AS dept_id,
           d."IsActive",
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(da.*),0),1) AS sunday_pct,
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(da.*),0),1) AS tuesday_pct,
-          ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(da.*),0),1) AS cell_pct,
-          ROUND((COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)+COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END)+COUNT(CASE WHEN cm."AttendanceStatus"=1 THEN 1 END))*100.0/NULLIF(COUNT(da.*)*3,0),1) AS overall_pct,
-          COUNT(da.*)::int AS total_records
+          COALESCE(att.total, 0)                                                              AS total,
+          COALESCE(att.sunday_present, 0)                                                    AS sunday_present,
+          COALESCE(att.tuesday_present, 0)                                                   AS tuesday_present,
+          COALESCE(att.cell_present, 0)                                                      AS cell_present,
+          CASE WHEN COALESCE(att.total, 0) = 0 THEN 0
+               ELSE ROUND(att.sunday_present  * 100.0 / att.total, 1) END                   AS sunday_pct,
+          CASE WHEN COALESCE(att.total, 0) = 0 THEN 0
+               ELSE ROUND(att.tuesday_present * 100.0 / att.total, 1) END                   AS tuesday_pct,
+          CASE WHEN COALESCE(att.total, 0) = 0 THEN 0
+               ELSE ROUND(att.cell_present    * 100.0 / att.total, 1) END                   AS cell_pct
         FROM "Departments" d
         JOIN "AspNetUsers" lu ON lu."Id" = d."DepartmentLeaderId"
-        LEFT JOIN "DepartmentAttendances" da ON da."DepartmentalLeaderId" = lu."Id"
-        LEFT JOIN "Sunday"      s  ON da."SundayServiceId"  = s."Id" AND s."SundayService" >= $1
-        LEFT JOIN "Tuesday"     t  ON da."TuesdayServiceId" = t."Id"
-        LEFT JOIN "CellMeeting" cm ON da."CellMeetingId"    = cm."Id"
-        GROUP BY d."Id", d."Name", d."IsActive"
-        ORDER BY overall_pct DESC NULLS LAST
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*)                                                 ::int AS total,
+            COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)       ::int AS sunday_present,
+            COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)       ::int AS tuesday_present,
+            COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)       ::int AS cell_present
+          FROM "DepartmentAttendances" da
+          JOIN "Sunday"      s  ON da."SundayServiceId"  = s."Id" AND s."SundayService" >= $1
+          JOIN "Tuesday"     t  ON da."TuesdayServiceId" = t."Id"
+          JOIN "CellMeeting" cm ON da."CellMeetingId"    = cm."Id"
+          WHERE da."DepartmentalLeaderId" = lu."Id"
+        ) att ON true
+        ORDER BY sunday_pct DESC NULLS LAST
       `, [dateFrom]);
 
-      const ck = cellKpiRes.rows[0];
-      const dk = deptKpiRes.rows[0];
+      const ck     = cellKpiRes.rows[0];
+      const dk     = deptKpiRes.rows[0];
       const counts = countsRes.rows[0];
 
       return {
@@ -1070,56 +1128,67 @@ router.get('/analytics/admin/overview', async (req, res) => {
           depts:   counts.depts
         },
         cellKpi: {
-          sundayPct:  parseFloat(ck.sunday_pct  ?? 0),
-          tuesdayPct: parseFloat(ck.tuesday_pct ?? 0),
-          cellPct:    parseFloat(ck.cell_pct    ?? 0),
-          total:      ck.total
+          total:          ck.total,
+          sundayPresent:  ck.sunday_present,
+          tuesdayPresent: ck.tuesday_present,
+          cellPresent:    ck.cell_present,
+          sundayPct:      parseFloat(ck.sunday_pct  ?? 0),
+          tuesdayPct:     parseFloat(ck.tuesday_pct ?? 0),
+          cellPct:        parseFloat(ck.cell_pct    ?? 0)
         },
         deptKpi: {
-          sundayPct:  parseFloat(dk.sunday_pct  ?? 0),
-          tuesdayPct: parseFloat(dk.tuesday_pct ?? 0),
-          cellPct:    parseFloat(dk.cell_pct    ?? 0),
-          total:      dk.total
+          total:          dk.total,
+          sundayPresent:  dk.sunday_present,
+          tuesdayPresent: dk.tuesday_present,
+          cellPresent:    dk.cell_present,
+          sundayPct:      parseFloat(dk.sunday_pct  ?? 0),
+          tuesdayPct:     parseFloat(dk.tuesday_pct ?? 0),
+          cellPct:        parseFloat(dk.cell_pct    ?? 0)
         },
         cellTrend: trendRes.rows.map(r => ({
           label:          r.label,
+          total:          r.total,
           sundayPresent:  r.sunday_present,
           tuesdayPresent: r.tuesday_present,
           cellPresent:    r.cell_present,
-          total:          r.total,
           sundayPct:      parseFloat(r.sunday_pct  ?? 0),
           tuesdayPct:     parseFloat(r.tuesday_pct ?? 0),
           cellPct:        parseFloat(r.cell_pct    ?? 0)
         })),
         deptTrend: deptTrendRes.rows.map(r => ({
           label:          r.label,
+          total:          r.total,
           sundayPresent:  r.sunday_present,
           tuesdayPresent: r.tuesday_present,
           cellPresent:    r.cell_present,
-          total:          r.total,
           sundayPct:      parseFloat(r.sunday_pct  ?? 0),
           tuesdayPct:     parseFloat(r.tuesday_pct ?? 0),
           cellPct:        parseFloat(r.cell_pct    ?? 0)
         })),
         zonePerformance: zonePerfRes.rows.map(r => ({
-          zone:       r.zone,
-          zoneId:     r.zone_id,
-          members:    r.members,
-          cells:      r.cells,
-          sundayPct:  parseFloat(r.sunday_pct  ?? 0),
-          tuesdayPct: parseFloat(r.tuesday_pct ?? 0),
-          cellPct:    parseFloat(r.cell_pct    ?? 0),
-          overallPct: parseFloat(r.overall_pct ?? 0)
+          zone:           r.zone,
+          zoneId:         r.zone_id,
+          members:        r.members,
+          cells:          r.cells,
+          total:          r.total,
+          sundayPresent:  r.sunday_present,
+          tuesdayPresent: r.tuesday_present,
+          cellPresent:    r.cell_present,
+          sundayPct:      parseFloat(r.sunday_pct  ?? 0),
+          tuesdayPct:     parseFloat(r.tuesday_pct ?? 0),
+          cellPct:        parseFloat(r.cell_pct    ?? 0)
         })),
         deptPerformance: deptPerfRes.rows.map(r => ({
-          dept:         r.dept,
-          deptId:       r.dept_id,
-          isActive:     r.IsActive,
-          sundayPct:    parseFloat(r.sunday_pct  ?? 0),
-          tuesdayPct:   parseFloat(r.tuesday_pct ?? 0),
-          cellPct:      parseFloat(r.cell_pct    ?? 0),
-          overallPct:   parseFloat(r.overall_pct ?? 0),
-          totalRecords: r.total_records
+          dept:           r.dept,
+          deptId:         r.dept_id,
+          isActive:       r.IsActive,
+          total:          r.total,
+          sundayPresent:  r.sunday_present,
+          tuesdayPresent: r.tuesday_present,
+          cellPresent:    r.cell_present,
+          sundayPct:      parseFloat(r.sunday_pct  ?? 0),
+          tuesdayPct:     parseFloat(r.tuesday_pct ?? 0),
+          cellPct:        parseFloat(r.cell_pct    ?? 0)
         }))
       };
     });

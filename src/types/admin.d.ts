@@ -85,6 +85,10 @@ type TLeaderInfo = {
 };
 
 type TPerformanceKPI = {
+  total?: number;
+  sundayPresent?: number;
+  tuesdayPresent?: number;
+  cellPresent?: number;
   sundayPct: number;
   tuesdayPct: number;
   cellPct: number;
@@ -202,27 +206,48 @@ type TZonePerfItem = {
   zoneId: string;
   members: number;
   cells: number;
+  total: number;
+  sundayPresent: number;
+  tuesdayPresent: number;
+  cellPresent: number;
   sundayPct: number;
   tuesdayPct: number;
   cellPct: number;
-  overallPct: number;
 };
 
 type TDeptPerfItem = {
   dept: string;
   deptId: string;
   isActive: boolean;
+  total: number;
+  sundayPresent: number;
+  tuesdayPresent: number;
+  cellPresent: number;
   sundayPct: number;
   tuesdayPct: number;
   cellPct: number;
-  overallPct: number;
-  totalRecords: number;
 };
 
 type TAdminOverview = {
   counts: { members: number; cells: number; zones: number; depts: number };
-  cellKpi: { sundayPct: number; tuesdayPct: number; cellPct: number; total: number };
-  deptKpi: { sundayPct: number; tuesdayPct: number; cellPct: number; total: number };
+  cellKpi: {
+    total: number;
+    sundayPresent: number;
+    tuesdayPresent: number;
+    cellPresent: number;
+    sundayPct: number;
+    tuesdayPct: number;
+    cellPct: number;
+  };
+  deptKpi: {
+    total: number;
+    sundayPresent: number;
+    tuesdayPresent: number;
+    cellPresent: number;
+    sundayPct: number;
+    tuesdayPct: number;
+    cellPct: number;
+  };
   cellTrend: TAttTrendPoint[];
   deptTrend: TAttTrendPoint[];
   zonePerformance: TZonePerfItem[];
