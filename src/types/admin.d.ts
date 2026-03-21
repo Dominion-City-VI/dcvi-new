@@ -176,10 +176,55 @@ type TDeptLeaderItem = TLeaderInfo & {
   department: string;
   departmentId: string;
   isAssistant: boolean;
+  performance: TPerformanceKPI & { totalRecords: number };
 };
 
 type TLeadersOverview = {
   zonalLeaders: TZonalLeaderItem[];
   cellLeaders: TCellLeaderItem[];
   deptLeaders: TDeptLeaderItem[];
+};
+
+// ─── Admin Overview Analytics ─────────────────────────────────────────────────
+type TAttTrendPoint = {
+  label: string;
+  sundayPresent: number;
+  tuesdayPresent: number;
+  cellPresent: number;
+  total: number;
+  sundayPct: number;
+  tuesdayPct: number;
+  cellPct: number;
+};
+
+type TZonePerfItem = {
+  zone: string;
+  zoneId: string;
+  members: number;
+  cells: number;
+  sundayPct: number;
+  tuesdayPct: number;
+  cellPct: number;
+  overallPct: number;
+};
+
+type TDeptPerfItem = {
+  dept: string;
+  deptId: string;
+  isActive: boolean;
+  sundayPct: number;
+  tuesdayPct: number;
+  cellPct: number;
+  overallPct: number;
+  totalRecords: number;
+};
+
+type TAdminOverview = {
+  counts: { members: number; cells: number; zones: number; depts: number };
+  cellKpi: { sundayPct: number; tuesdayPct: number; cellPct: number; total: number };
+  deptKpi: { sundayPct: number; tuesdayPct: number; cellPct: number; total: number };
+  cellTrend: TAttTrendPoint[];
+  deptTrend: TAttTrendPoint[];
+  zonePerformance: TZonePerfItem[];
+  deptPerformance: TDeptPerfItem[];
 };

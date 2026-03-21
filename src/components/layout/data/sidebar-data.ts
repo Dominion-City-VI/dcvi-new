@@ -8,7 +8,8 @@ import {
   TableCellsMerge,
   Users,
   Wallet2,
-  ShieldCheck
+  ShieldCheck,
+  BarChart3
 } from 'lucide-react';
 
 export const sidebarData: SidebarData = {
@@ -151,6 +152,12 @@ export const sidebarData: SidebarData = {
           title: 'Leaders',
           icon: ShieldCheck,
           url: '/admin/leaders',
+          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
+        },
+        {
+          title: 'Analytics',
+          icon: BarChart3,
+          url: '/admin/analytics',
           rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
         }
       ]

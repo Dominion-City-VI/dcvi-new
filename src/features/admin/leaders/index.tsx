@@ -1,5 +1,4 @@
-'use client';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Main } from '@/components/layout/main';
 import { observer } from 'mobx-react-lite';
 import { useFetchLeaders } from '@/hooks/admin/useFetchLeaders';
@@ -7,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { dateTimeUTC } from '@/utils/date';
 import {
   Table,
@@ -16,6 +16,13 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 
 const PERIODS = [
   { label: 'Last 7 days', value: '1' },
@@ -42,10 +49,78 @@ function LastLogin({ ts }: { ts: string | null }) {
 
 type Tab = 'zonal' | 'cell' | 'dept';
 
+const ALL = '__all__';
+
 const LeadersOverview = () => {
-  const [period, setPeriod] = useState('2');
-  const [tab, setTab] = useState<Tab>('zonal');
+  const [period, setPeriod]   = useState('2');
+  const [tab, setTab]         = useState<Tab>('zonal');
+  const [search, setSearch]   = useState('');
+  const [zoneFilter, setZoneFilter] = useState(ALL);
+  const [deptFilter, setDeptFilter] = useState(ALL);
+
   const { data, isLoading, status } = useFetchLeaders(period);
+
+  const q = search.toLowerCase().trim();
+
+  // ── unique zones from cell leaders
+  const uniqueZones = useMemo(() => {
+    const seen = new Set<string>();
+    const result: { id: string; name: string }[] = [];
+    for (const l of data?.cellLeaders ?? []) {
+      if (!seen.has(l.zoneId)) { seen.add(l.zoneId); result.push({ id: l.zoneId, name: l.zone }); }
+    }
+    return result.sort((a, b) => a.name.localeCompare(b.name));
+  }, [data?.cellLeaders]);
+
+  // ── unique depts from dept leaders
+  const uniqueDepts = useMemo(() => {
+    const seen = new Set<string>();
+    const result: { id: string; name: string }[] = [];
+    for (const l of data?.deptLeaders ?? []) {
+      if (!seen.has(l.departmentId)) { seen.add(l.departmentId); result.push({ id: l.departmentId, name: l.department }); }
+    }
+    return result.sort((a, b) => a.name.localeCompare(b.name));
+  }, [data?.deptLeaders]);
+
+  // ── Filtered zonal leaders
+  const filteredZonal = useMemo(() => {
+    return (data?.zonalLeaders ?? []).filter(l =>
+      !q || l.name.toLowerCase().includes(q) || l.email.toLowerCase().includes(q) || l.zone.toLowerCase().includes(q)
+    );
+  }, [data?.zonalLeaders, q]);
+
+  // ── Cell leaders filtered + grouped by zone
+  const cellGroupedByZone = useMemo(() => {
+    const filtered = (data?.cellLeaders ?? []).filter(l => {
+      const matchesSearch = !q || l.name.toLowerCase().includes(q) || l.email.toLowerCase().includes(q) || l.cell.toLowerCase().includes(q);
+      const matchesZone   = zoneFilter === ALL || l.zoneId === zoneFilter;
+      return matchesSearch && matchesZone;
+    });
+
+    const grouped: Record<string, { zoneName: string; leaders: typeof filtered }> = {};
+    for (const l of filtered) {
+      if (!grouped[l.zoneId]) grouped[l.zoneId] = { zoneName: l.zone, leaders: [] };
+      grouped[l.zoneId].leaders.push(l);
+    }
+    return Object.entries(grouped).sort(([, a], [, b]) => a.zoneName.localeCompare(b.zoneName));
+  }, [data?.cellLeaders, q, zoneFilter]);
+
+  // ── Dept leaders filtered + grouped by department
+  const deptGrouped = useMemo(() => {
+    const filtered = (data?.deptLeaders ?? []).filter(l => {
+      const matchesSearch = !q || l.name.toLowerCase().includes(q) || l.email.toLowerCase().includes(q) || l.department.toLowerCase().includes(q);
+      const matchesDept   = deptFilter === ALL || l.departmentId === deptFilter;
+      return matchesSearch && matchesDept;
+    });
+
+    const grouped: Record<string, { deptName: string; leaders: typeof filtered; assistants: typeof filtered }> = {};
+    for (const l of filtered) {
+      if (!grouped[l.departmentId]) grouped[l.departmentId] = { deptName: l.department, leaders: [], assistants: [] };
+      if (l.isAssistant) grouped[l.departmentId].assistants.push(l);
+      else               grouped[l.departmentId].leaders.push(l);
+    }
+    return Object.entries(grouped).sort(([, a], [, b]) => a.deptName.localeCompare(b.deptName));
+  }, [data?.deptLeaders, q, deptFilter]);
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: 'zonal', label: 'Zonal Leaders', count: data?.zonalLeaders.length },
@@ -62,50 +137,75 @@ const LeadersOverview = () => {
         </div>
         <div className="flex gap-2">
           {PERIODS.map(p => (
-            <Button
-              key={p.value}
-              size="sm"
-              variant={period === p.value ? 'default' : 'outline'}
-              onClick={() => setPeriod(p.value)}
-            >
+            <Button key={p.value} size="sm" variant={period === p.value ? 'default' : 'outline'} onClick={() => setPeriod(p.value)}>
               {p.label}
             </Button>
           ))}
         </div>
       </div>
 
-      <div className="flex gap-2 mb-4 border-b pb-1">
+      {/* ── Tabs ──────────────────────────────────────────────────────── */}
+      <div className="flex gap-2 border-b pb-1">
         {tabs.map(t => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key)}
+            onClick={() => { setTab(t.key); setSearch(''); setZoneFilter(ALL); setDeptFilter(ALL); }}
             className={cn(
               'px-4 py-1.5 text-sm font-medium rounded-t transition-colors',
-              tab === t.key
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-muted-foreground hover:text-foreground'
+              tab === t.key ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'
             )}
           >
             {t.label}
             {t.count != null && (
-              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px]">
-                {t.count}
-              </span>
+              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px]">{t.count}</span>
             )}
           </button>
         ))}
       </div>
 
+      {/* ── Search + filter bar ────────────────────────────────────────── */}
+      <div className="flex flex-wrap gap-2 mt-3 mb-4">
+        <Input
+          placeholder={tab === 'zonal' ? 'Search by name, email or zone…' : tab === 'cell' ? 'Search by name, email or cell…' : 'Search by name, email or department…'}
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="max-w-sm"
+        />
+        {tab === 'cell' && (
+          <Select value={zoneFilter} onValueChange={setZoneFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filter by zone" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All zones</SelectItem>
+              {uniqueZones.map(z => <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+        {tab === 'dept' && (
+          <Select value={deptFilter} onValueChange={setDeptFilter}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="Filter by department" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All departments</SelectItem>
+              {uniqueDepts.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
       {isLoading ? (
         <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+          {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-12 w-full" />)}
         </div>
       ) : status === 'error' ? (
-        <div className="flex h-60 flex-col items-center justify-center gap-2 text-muted-foreground">
-          <p className="text-sm">Could not load leaders data. The server may be starting up — please try again shortly.</p>
+        <div className="flex h-60 items-center justify-center text-muted-foreground">
+          <p className="text-sm">Could not load leaders data. The server may be starting up — try again shortly.</p>
         </div>
       ) : (
         <>
+          {/* ── Zonal tab ─────────────────────────────────────────────── */}
           {tab === 'zonal' && (
             <div className="rounded-md border overflow-x-auto">
               <Table>
@@ -123,7 +223,7 @@ const LeadersOverview = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(data?.zonalLeaders ?? []).map((l, i) => (
+                  {filteredZonal.map((l, i) => (
                     <TableRow key={l.id}>
                       <TableCell className="text-muted-foreground text-xs">{i + 1}</TableCell>
                       <TableCell>
@@ -139,9 +239,9 @@ const LeadersOverview = () => {
                       <TableCell><LastLogin ts={l.lastLogin} /></TableCell>
                     </TableRow>
                   ))}
-                  {(data?.zonalLeaders ?? []).length === 0 && (
+                  {filteredZonal.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center h-24 text-muted-foreground">No zonal leaders found.</TableCell>
+                      <TableCell colSpan={9} className="text-center h-24 text-muted-foreground">No results found.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -149,92 +249,112 @@ const LeadersOverview = () => {
             </div>
           )}
 
+          {/* ── Cell tab — grouped by zone ─────────────────────────────── */}
           {tab === 'cell' && (
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>#</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Cell</TableHead>
-                    <TableHead>Zone</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead className="text-center">Members</TableHead>
-                    <TableHead className="text-center">Sun %</TableHead>
-                    <TableHead className="text-center">Tue %</TableHead>
-                    <TableHead className="text-center">Cell %</TableHead>
-                    <TableHead>Last Login</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(data?.cellLeaders ?? []).map((l, i) => (
-                    <TableRow key={l.id + l.cell}>
-                      <TableCell className="text-muted-foreground text-xs">{i + 1}</TableCell>
-                      <TableCell>
-                        <div className="font-medium">{l.name}</div>
-                        <div className="text-xs text-muted-foreground">{l.email}</div>
-                      </TableCell>
-                      <TableCell>{l.cell}</TableCell>
-                      <TableCell>{l.zone}</TableCell>
-                      <TableCell>
-                        <Badge variant={l.isAssistant ? 'secondary' : 'default'} className="text-[10px]">
-                          {l.isAssistant ? 'Assistant' : 'Leader'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">{l.memberCount}</TableCell>
-                      <TableCell className="text-center"><PerfBadge value={l.performance.sundayPct} /></TableCell>
-                      <TableCell className="text-center"><PerfBadge value={l.performance.tuesdayPct} /></TableCell>
-                      <TableCell className="text-center"><PerfBadge value={l.performance.cellPct} /></TableCell>
-                      <TableCell><LastLogin ts={l.lastLogin} /></TableCell>
-                    </TableRow>
-                  ))}
-                  {(data?.cellLeaders ?? []).length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={10} className="text-center h-24 text-muted-foreground">No cell leaders found.</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+            <div className="space-y-6">
+              {cellGroupedByZone.length === 0 ? (
+                <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">No results found.</div>
+              ) : cellGroupedByZone.map(([zoneId, group]) => (
+                <div key={zoneId}>
+                  <h4 className="text-sm font-semibold mb-2 px-1 text-primary/80 uppercase tracking-wide">
+                    Zone: {group.zoneName}
+                    <span className="ml-2 text-xs text-muted-foreground font-normal normal-case">({group.leaders.length} leaders)</span>
+                  </h4>
+                  <div className="rounded-md border overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>#</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Cell</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead className="text-center">Members</TableHead>
+                          <TableHead className="text-center">Sun %</TableHead>
+                          <TableHead className="text-center">Tue %</TableHead>
+                          <TableHead className="text-center">Cell %</TableHead>
+                          <TableHead>Last Login</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {group.leaders.map((l, i) => (
+                          <TableRow key={l.id + l.cell}>
+                            <TableCell className="text-muted-foreground text-xs">{i + 1}</TableCell>
+                            <TableCell>
+                              <div className="font-medium">{l.name}</div>
+                              <div className="text-xs text-muted-foreground">{l.email}</div>
+                            </TableCell>
+                            <TableCell>{l.cell}</TableCell>
+                            <TableCell>
+                              <Badge variant={l.isAssistant ? 'secondary' : 'default'} className="text-[10px]">
+                                {l.isAssistant ? 'Assistant' : 'Leader'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">{l.memberCount}</TableCell>
+                            <TableCell className="text-center"><PerfBadge value={l.performance.sundayPct} /></TableCell>
+                            <TableCell className="text-center"><PerfBadge value={l.performance.tuesdayPct} /></TableCell>
+                            <TableCell className="text-center"><PerfBadge value={l.performance.cellPct} /></TableCell>
+                            <TableCell><LastLogin ts={l.lastLogin} /></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
+          {/* ── Dept tab — grouped by department ──────────────────────── */}
           {tab === 'dept' && (
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>#</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Last Login</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(data?.deptLeaders ?? []).map((l, i) => (
-                    <TableRow key={l.id + l.department}>
-                      <TableCell className="text-muted-foreground text-xs">{i + 1}</TableCell>
-                      <TableCell className="font-medium">{l.name}</TableCell>
-                      <TableCell>{l.department}</TableCell>
-                      <TableCell>
-                        <Badge variant={l.isAssistant ? 'secondary' : 'default'} className="text-[10px]">
-                          {l.isAssistant ? 'Assistant' : 'Leader'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs">{l.email}</TableCell>
-                      <TableCell className="text-xs">{l.phone}</TableCell>
-                      <TableCell><LastLogin ts={l.lastLogin} /></TableCell>
-                    </TableRow>
-                  ))}
-                  {(data?.deptLeaders ?? []).length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">No department leaders found.</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+            <div className="space-y-6">
+              {deptGrouped.length === 0 ? (
+                <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">No results found.</div>
+              ) : deptGrouped.map(([deptId, group]) => (
+                <div key={deptId}>
+                  <h4 className="text-sm font-semibold mb-2 px-1 text-primary/80 uppercase tracking-wide">
+                    {group.deptName}
+                    <span className="ml-2 text-xs font-normal normal-case text-muted-foreground">
+                      ({group.leaders.length} leader{group.leaders.length !== 1 ? 's' : ''}, {group.assistants.length} assistant{group.assistants.length !== 1 ? 's' : ''})
+                    </span>
+                  </h4>
+                  <div className="rounded-md border overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Phone</TableHead>
+                          <TableHead className="text-center">Sun %</TableHead>
+                          <TableHead className="text-center">Tue %</TableHead>
+                          <TableHead className="text-center">Fri %</TableHead>
+                          <TableHead className="text-center">Records</TableHead>
+                          <TableHead>Last Login</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {[...group.leaders, ...group.assistants].map(l => (
+                          <TableRow key={l.id + l.department}>
+                            <TableCell className="font-medium">{l.name}</TableCell>
+                            <TableCell>
+                              <Badge variant={l.isAssistant ? 'secondary' : 'default'} className="text-[10px]">
+                                {l.isAssistant ? 'Assistant' : 'Leader'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs">{l.email}</TableCell>
+                            <TableCell className="text-xs">{l.phone}</TableCell>
+                            <TableCell className="text-center"><PerfBadge value={l.performance.sundayPct} /></TableCell>
+                            <TableCell className="text-center"><PerfBadge value={l.performance.tuesdayPct} /></TableCell>
+                            <TableCell className="text-center"><PerfBadge value={l.performance.cellPct} /></TableCell>
+                            <TableCell className="text-center text-xs">{l.performance.totalRecords}</TableCell>
+                            <TableCell><LastLogin ts={l.lastLogin} /></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </>

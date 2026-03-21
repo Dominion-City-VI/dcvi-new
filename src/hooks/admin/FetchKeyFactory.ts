@@ -5,6 +5,7 @@ const LOCAL_DEPT_ATT_SUMMARY     = '/analytics/admin/dept-attendance';
 const LOCAL_ZONES_OVERVIEW       = '/analytics/admin/zones-overview';
 const LOCAL_DEPT_OVERVIEW        = '/analytics/admin/dept-overview';
 const LOCAL_LEADERS              = '/analytics/admin/leaders';
+const LOCAL_ADMIN_OVERVIEW       = '/analytics/admin/overview';
 
 export const admin = {
   getAnalytics(query: TCellAnalyticsQuery) {
@@ -71,6 +72,15 @@ export const admin = {
     return {
       path: LOCAL_LEADERS,
       keys: () => [LOCAL_LEADERS, period] as const,
+      params: { period },
+      requestServer: 'localServer' as const
+    };
+  },
+
+  getOverview(period: string) {
+    return {
+      path: LOCAL_ADMIN_OVERVIEW,
+      keys: () => [LOCAL_ADMIN_OVERVIEW, period] as const,
       params: { period },
       requestServer: 'localServer' as const
     };
