@@ -13,7 +13,7 @@ const Zones = () => {
     AppConfigStore: { toggleModals },
     ZoneStore: { zoneQuery }
   } = useStore();
-  const { data, isLoading } = useFetchAllZones(zoneQuery);
+  const { data, isLoading, status } = useFetchAllZones(zoneQuery);
 
   return (
     <Main>
@@ -26,25 +26,25 @@ const Zones = () => {
             <Skeleton className="h-8 w-24" />
             <Skeleton className="h-8 w-24" />
           </div>
-
           <Skeleton className="h-[50svh] w-full" />
         </div>
-      ) : (
-        data && (
-          <div className="flex flex-col justify-between space-y-3">
-            <div className="flex w-full justify-end">
-              <Button
-                onClick={() => toggleModals({ name: AppModals.CREATE_ZONE, open: true })}
-                className="space-x-1"
-              >
-                <span>Create new zone</span> <IconPlus size={18} />
-              </Button>
-            </div>
-
-            <ZonesTable {...{ placeholder: 'search zones...', data }} />
+      ) : status === 'error' ? (
+        <div className="flex h-60 flex-col items-center justify-center gap-2 text-muted-foreground">
+          <p className="text-sm">Could not load zones. The server may be starting up — please try again shortly.</p>
+        </div>
+      ) : data ? (
+        <div className="flex flex-col justify-between space-y-3">
+          <div className="flex w-full justify-end">
+            <Button
+              onClick={() => toggleModals({ name: AppModals.CREATE_ZONE, open: true })}
+              className="space-x-1"
+            >
+              <span>Create new zone</span> <IconPlus size={18} />
+            </Button>
           </div>
-        )
-      )}
+          <ZonesTable {...{ placeholder: 'search zones...', data }} />
+        </div>
+      ) : null}
     </Main>
   );
 };

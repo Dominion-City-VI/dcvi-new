@@ -1,8 +1,8 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { Stores } from '@/store';
+import { AUTH } from '@/constants/api';
 
-const BASE_URL = 'https://cms-backend-i97e.onrender.com/api/v1'; // ?? import.meta.env.VITE_APP_API_BASE_URL;
-//const BASE_URL = 'http://localhost/api/v1'; // ?? import.meta.env.VITE_APP_API_BASE_URL;
+const BASE_URL = 'https://cms-backend-i97e.onrender.com/api/v1';
 
 const resourceReqInterceptor = (config: InternalAxiosRequestConfig) => {
   const modifiedConfig = { ...config };
@@ -15,7 +15,7 @@ const resourceReqInterceptor = (config: InternalAxiosRequestConfig) => {
 
 const resourceResInterceptor = (response: AxiosResponse) => response;
 
-const resourceResErrorInterceptor = (error: AxiosError) => {
+const resourceResErrorInterceptor = async (error: AxiosError) => {
   if (error.response && error.config) {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
@@ -23,17 +23,27 @@ const resourceResErrorInterceptor = (error: AxiosError) => {
       originalRequest._retry = true;
 
       const refresh_token = Stores.AuthStore.refreshToken;
-      let tokenObj = { token: '', refreshToken: '' };
+      const access_token = Stores.AuthStore.accessToken;
 
       if (refresh_token) {
-        const gen = Stores.AuthStore.fetchNewToken();
-        tokenObj = gen.next().value as { token: string; refreshToken: string };
+        try {
+          const { data } = await axios.post(`${BASE_URL}${AUTH.NEW_TOKEN}`, {
+            token: access_token,
+            refreshToken: refresh_token
+          });
+
+          if (data?.data?.token) {
+            Stores.AuthStore.setTokens(data.data.token, data.data.refreshToken);
+            originalRequest.headers!['Authorization'] = `Bearer ${data.data.token}`;
+            return dcviServer(originalRequest);
+          }
+        } catch (_refreshErr) {
+          Stores.AuthStore.logout();
+          return Promise.reject(_refreshErr);
+        }
+      } else {
+        Stores.AuthStore.logout();
       }
-
-      const { token } = tokenObj;
-      axios.defaults.headers.common['Authorization'] = 'Bearer ' + token;
-
-      return dcviServer(originalRequest);
     }
   }
 

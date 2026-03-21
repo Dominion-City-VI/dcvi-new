@@ -322,4 +322,49 @@ router.get('/analytics/status-summary', async (req, res) => {
   }
 });
 
+// GET /analytics/leader-context?email=xxx
+// Returns the cell/zone context for a user identified by their email address.
+// Used when userExtraInfo.cellId or zonalId is not available after a role switch.
+router.get('/analytics/leader-context', async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) return res.status(400).json(errResult('email required'));
+
+    const userRes = await pool.query(
+      `SELECT "Id", "CellId", "ZoneId" FROM "AspNetUsers" WHERE "NormalizedEmail" = $1 LIMIT 1`,
+      [email.toString().toUpperCase()]
+    );
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json(errResult('User not found'));
+    }
+
+    const user = userRes.rows[0];
+    let { CellId: cellId, ZoneId: zonalId } = user;
+
+    // Fall back to CellLeaders table if AspNetUsers.CellId is null
+    if (!cellId) {
+      const clRes = await pool.query(
+        `SELECT "CellId" FROM "CellLeaders" WHERE "UserId" = $1 AND "IsAssistant" = false LIMIT 1`,
+        [user.Id]
+      );
+      if (clRes.rows.length > 0) cellId = clRes.rows[0].CellId;
+    }
+
+    // Fall back to ZonalLeaders table if AspNetUsers.ZoneId is null
+    if (!zonalId) {
+      const zlRes = await pool.query(
+        `SELECT "ZoneId" FROM "ZonalLeaders" WHERE "UserId" = $1 LIMIT 1`,
+        [user.Id]
+      );
+      if (zlRes.rows.length > 0) zonalId = zlRes.rows[0].ZoneId;
+    }
+
+    res.json(wrapResult({ cellId: cellId ?? null, zonalId: zonalId ?? null, userId: user.Id }));
+  } catch (err) {
+    console.error('[leader context]', err.message);
+    res.status(500).json(errResult(err.message));
+  }
+});
+
 export default router;

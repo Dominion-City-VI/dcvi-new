@@ -16,7 +16,7 @@ const ZoneAttendance = () => {
 
   const [zonalAttendance, setAdminZonalAttendance] = useState<Array<TAdminAttendanceItem>>([]);
   // adminZoneAttendanceQuery.ZoneId = userExtraInfo.zonalId as string;
-  const { data, isLoading } = useFetchAdminAttendance(adminZoneAttendanceQuery);
+  const { data, isLoading, status } = useFetchAdminAttendance(adminZoneAttendanceQuery);
 
   useEffect(() => {
     if (!isLoading && data !== undefined) {
@@ -51,6 +51,14 @@ const ZoneAttendance = () => {
             <Skeleton className="h-8 w-36" /> <Skeleton className="h-8 w-16" />
           </div>
           <Skeleton className="h-96 w-full" />
+        </div>
+      ) : status === 'error' ? (
+        <div className="flex h-60 flex-col items-center justify-center gap-2 text-muted-foreground">
+          <p className="text-sm">Could not load attendance data. The server may be starting up — please try again shortly.</p>
+        </div>
+      ) : Object.keys(groupedZones).length === 0 ? (
+        <div className="flex h-60 flex-col items-center justify-center gap-2 text-muted-foreground">
+          <p className="text-sm">No attendance records found for the selected period.</p>
         </div>
       ) : (
         Object.keys(groupedZones).map((zoneName) => {

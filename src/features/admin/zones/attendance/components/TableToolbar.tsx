@@ -37,8 +37,6 @@ const DataTableToolbar = () => {
     resetAttendanceFilter();
   };
 
-  console.log(adminZoneAttendanceQuery);
-
   return (
     <div className="flex w-full items-center justify-between">
       <Form {...form}>

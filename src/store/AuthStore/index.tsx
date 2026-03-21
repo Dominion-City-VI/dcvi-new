@@ -24,6 +24,8 @@ import { TVerifyEmailSearchSchema } from '@/routes/auth/verification';
 import { AxiosResponse } from 'axios';
 import { getProfile } from '@/requests/profile';
 import { useStyledToast } from '@/hooks/custom/useStyledToast';
+import { EnumRoles } from '@/constants/mangle';
+import localServer from '@/servers/localServer';
 
 // eslint-disable-next-line react-hooks/rules-of-hooks
 const toast = useStyledToast();
@@ -73,6 +75,7 @@ class AuthStore {
       user: observable,
       userRole: observable,
       activeRole: observable,
+      userExtraInfo: observable,
       accessToken: observable,
       refreshToken: observable,
       isLoading: observable,
@@ -105,19 +108,48 @@ class AuthStore {
 
   *updateActiveRole(role: number, cb?: () => void) {
     this.activeRole = persist(Mangle.USER_ACTIVE_ROLE, role);
-    
+
     try {
-      // Fetch updated profile with new role context
       const result = (yield getProfile()) as AxiosResponse<IDCVIServerRes<TLoginRes>>;
-      
+
       if (result.data.status) {
         this.user = persist(Mangle.USER, result.data.data);
-        // If the API returns updated extraInfo for the new role, update it
         if (result.data.data.extraInfo) {
           this.userExtraInfo = persist(Mangle.USER_EXTRA_INFO, result.data.data.extraInfo);
         }
       }
-    
+
+      // For roles that need a specific cell/zone context, look up from local DB
+      const roleNeedsContext = [
+        EnumRoles.CELL_LEADER,
+        EnumRoles.ASST_CELL_LEADER,
+        EnumRoles.ZONAL_PASTOR,
+        EnumRoles.DEPARTMENTAL_HEAD,
+        EnumRoles.ASST_DEPARTMENTAL_HEAD
+      ].includes(role);
+
+      if (roleNeedsContext) {
+        const email = (this.user as Partial<TProfileInfo>).email;
+        if (email) {
+          try {
+            const ctxRes = (yield localServer.get('/analytics/leader-context', {
+              params: { email }
+            })) as AxiosResponse<IDCVIServerRes<{ cellId: string | null; zonalId: string | null; userId: string }>>;
+
+            if (ctxRes.data.status && ctxRes.data.data) {
+              const { cellId, zonalId } = ctxRes.data.data;
+              this.userExtraInfo = persist(Mangle.USER_EXTRA_INFO, {
+                ...this.userExtraInfo,
+                ...(cellId ? { cellId } : {}),
+                ...(zonalId ? { zonalId } : {})
+              });
+            }
+          } catch (_ctxErr) {
+            // Context fetch failed — userExtraInfo remains from login
+          }
+        }
+      }
+
       cb?.();
     } catch (error) {
       toast.error('Failed to switch role');

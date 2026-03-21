@@ -15,7 +15,7 @@ const RequestAction = () => {
     ...paginatedRes
   });
 
-  const { data, isLoading } = useAdminFetchActionReqs(usersQuery);
+  const { data, isLoading, status } = useAdminFetchActionReqs(usersQuery);
 
   useEffect(() => {
     if (!isLoading && data !== undefined) {
@@ -39,6 +39,10 @@ const RequestAction = () => {
               <Skeleton className="h-8 w-36" /> <Skeleton className="h-8 w-16" />
             </div>
             <Skeleton className="h-96 w-full" />
+          </div>
+        ) : status === 'error' ? (
+          <div className="flex h-60 flex-col items-center justify-center gap-2 text-muted-foreground">
+            <p className="text-sm">Could not load action requests. The server may be starting up — please try again shortly.</p>
           </div>
         ) : (
           <ActionTable {...{ placeholder: 'filter actions...', data: actions }} />

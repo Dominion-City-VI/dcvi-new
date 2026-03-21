@@ -15,7 +15,7 @@ const RequestAccess = () => {
     ...paginatedRes
   });
 
-  const { data, isLoading } = useAdminFetchAccessReqs(usersQuery);
+  const { data, isLoading, status } = useAdminFetchAccessReqs(usersQuery);
 
   useEffect(() => {
     if (!isLoading && data !== undefined) {
@@ -39,6 +39,10 @@ const RequestAccess = () => {
               <Skeleton className="h-8 w-36" /> <Skeleton className="h-8 w-16" />
             </div>
             <Skeleton className="h-96 w-full" />
+          </div>
+        ) : status === 'error' ? (
+          <div className="flex h-60 flex-col items-center justify-center gap-2 text-muted-foreground">
+            <p className="text-sm">Could not load access requests. The server may be starting up — please try again shortly.</p>
           </div>
         ) : (
           <AccessReqsTable {...{ placeholder: 'filter users...', data: access }} />

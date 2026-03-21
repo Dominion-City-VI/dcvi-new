@@ -26,31 +26,54 @@ const STATUS_COLORS = {
 
 function CellLeaderDB() {
   const {
-    AuthStore: { userExtraInfo }
+    AuthStore: { userExtraInfo, activeRole }
   } = useStore();
   const [query, setQuery] = useState('WEEK');
+  const [periodicAnalysis, setPeriodicAnalysis] = useState<Array<TPeriodicAnalysisDatapointItem>>([]);
+
   const periodNum = PeriodNameMap.get(query) as number;
+  const cellId = userExtraInfo.cellId;
 
   const { data, isLoading } = useFetchCellAnalytics(
     { period: periodNum },
-    userExtraInfo.cellId
+    cellId
   );
 
   const { statusSummary, isLoading: summaryLoading } = useFetchAttendanceSummaries({
-    id: userExtraInfo.cellId,
+    id: cellId,
     period: periodNum,
     roleType: EnumRoles.CELL_LEADER
   });
-
-  const [periodicAnalysis, setPeriodicAnalysis] = useState<Array<TPeriodicAnalysisDatapointItem>>(
-    []
-  );
 
   useEffect(() => {
     if (!isLoading && data?.performanceInPercentage) {
       setPeriodicAnalysis(data.periodicAnalysisDatapoint || []);
     }
   }, [data, isLoading]);
+
+  // Show skeleton while waiting for cellId to be resolved after role switch
+  if (!cellId) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="mb-2 flex items-center justify-between">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-9 w-36" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array(4).fill(0).map((_, i) => (
+            <Skeleton key={i} className="h-28 rounded-xl" />
+          ))}
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Skeleton className="col-span-2 h-[450px] rounded-xl" />
+          <Skeleton className="h-[300px] rounded-xl" />
+        </div>
+        <p className="text-center text-sm text-muted-foreground">
+          Loading cell information for role {activeRole}…
+        </p>
+      </div>
+    );
+  }
 
   const perf = data?.performanceInPercentage;
   const totalMembers = perf?.cellStrength ?? 0;
