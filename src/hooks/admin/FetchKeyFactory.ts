@@ -1,6 +1,10 @@
 import { ADMIN } from '@/constants/api';
 
-const LOCAL_ADMIN_ANALYTICS = '/analytics/admin';
+const LOCAL_ADMIN_ANALYTICS      = '/analytics/admin';
+const LOCAL_DEPT_ATT_SUMMARY     = '/analytics/admin/dept-attendance';
+const LOCAL_ZONES_OVERVIEW       = '/analytics/admin/zones-overview';
+const LOCAL_DEPT_OVERVIEW        = '/analytics/admin/dept-overview';
+const LOCAL_LEADERS              = '/analytics/admin/leaders';
 
 export const admin = {
   getAnalytics(query: TCellAnalyticsQuery) {
@@ -33,6 +37,42 @@ export const admin = {
       path: ADMIN.ACTION_REQUESTS,
       keys: () => [ADMIN.GET_ANALYTICS, ADMIN.ACTION_REQUESTS, query] as const,
       params: query
+    };
+  },
+
+  getDeptAttendanceSummary(query: { period?: string; StartAt?: string; EndAt?: string }) {
+    return {
+      path: LOCAL_DEPT_ATT_SUMMARY,
+      keys: () => [LOCAL_DEPT_ATT_SUMMARY, query] as const,
+      params: query,
+      requestServer: 'localServer' as const
+    };
+  },
+
+  getZonesOverview(period: string) {
+    return {
+      path: LOCAL_ZONES_OVERVIEW,
+      keys: () => [LOCAL_ZONES_OVERVIEW, period] as const,
+      params: { period },
+      requestServer: 'localServer' as const
+    };
+  },
+
+  getDeptOverview(period: string) {
+    return {
+      path: LOCAL_DEPT_OVERVIEW,
+      keys: () => [LOCAL_DEPT_OVERVIEW, period] as const,
+      params: { period },
+      requestServer: 'localServer' as const
+    };
+  },
+
+  getLeaders(period: string) {
+    return {
+      path: LOCAL_LEADERS,
+      keys: () => [LOCAL_LEADERS, period] as const,
+      params: { period },
+      requestServer: 'localServer' as const
     };
   }
 };

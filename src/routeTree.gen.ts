@@ -34,6 +34,7 @@ import { Route as AuthenticatedDepartmentDepartmentMembersIndexImport } from './
 import { Route as AuthenticatedCellMembersIndexImport } from './routes/_authenticated/cell/members/index'
 import { Route as AuthenticatedCellAttendanceIndexImport } from './routes/_authenticated/cell/attendance/index'
 import { Route as AuthenticatedAdminZonesIndexImport } from './routes/_authenticated/admin/zones/index'
+import { Route as AuthenticatedAdminLeadersIndexImport } from './routes/_authenticated/admin/leaders/index'
 import { Route as AuthenticatedAdminDepartmentsIndexImport } from './routes/_authenticated/admin/departments/index'
 import { Route as AuthenticatedZoneCellsCellIdImport } from './routes/_authenticated/zone/cells/$cellId'
 import { Route as AuthenticatedMessagingPhoneBookPhonebookIdImport } from './routes/_authenticated/messaging/phone-book/$phonebookId'
@@ -43,6 +44,7 @@ import { Route as AuthenticatedAdminRequestsActionsImport } from './routes/_auth
 import { Route as AuthenticatedAdminRequestsAccessImport } from './routes/_authenticated/admin/requests/access'
 import { Route as AuthenticatedAdminZonesAttendanceIndexImport } from './routes/_authenticated/admin/zones/attendance/index'
 import { Route as AuthenticatedAdminZonesZoneIdIndexImport } from './routes/_authenticated/admin/zones/$zoneId/index'
+import { Route as AuthenticatedAdminDepartmentsAttendanceIndexImport } from './routes/_authenticated/admin/departments/attendance/index'
 import { Route as AuthenticatedAdminZonesZoneIdCellIdImport } from './routes/_authenticated/admin/zones/$zoneId/$cellId'
 
 // Create/Update Routes
@@ -199,6 +201,13 @@ const AuthenticatedAdminZonesIndexRoute =
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
+const AuthenticatedAdminLeadersIndexRoute =
+  AuthenticatedAdminLeadersIndexImport.update({
+    id: '/admin/leaders/',
+    path: '/admin/leaders/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+
 const AuthenticatedAdminDepartmentsIndexRoute =
   AuthenticatedAdminDepartmentsIndexImport.update({
     id: '/admin/departments/',
@@ -259,6 +268,13 @@ const AuthenticatedAdminZonesZoneIdIndexRoute =
   AuthenticatedAdminZonesZoneIdIndexImport.update({
     id: '/admin/zones/$zoneId/',
     path: '/admin/zones/$zoneId/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+
+const AuthenticatedAdminDepartmentsAttendanceIndexRoute =
+  AuthenticatedAdminDepartmentsAttendanceIndexImport.update({
+    id: '/admin/departments/attendance/',
+    path: '/admin/departments/attendance/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
@@ -427,6 +443,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminDepartmentsIndexImport
       parentRoute: typeof AuthenticatedRouteImport
     }
+    '/_authenticated/admin/leaders/': {
+      id: '/_authenticated/admin/leaders/'
+      path: '/admin/leaders'
+      fullPath: '/admin/leaders'
+      preLoaderRoute: typeof AuthenticatedAdminLeadersIndexImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
     '/_authenticated/admin/zones/': {
       id: '/_authenticated/admin/zones/'
       path: '/admin/zones'
@@ -490,6 +513,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminZonesZoneIdCellIdImport
       parentRoute: typeof AuthenticatedRouteImport
     }
+    '/_authenticated/admin/departments/attendance/': {
+      id: '/_authenticated/admin/departments/attendance/'
+      path: '/admin/departments/attendance'
+      fullPath: '/admin/departments/attendance'
+      preLoaderRoute: typeof AuthenticatedAdminDepartmentsAttendanceIndexImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
     '/_authenticated/admin/zones/$zoneId/': {
       id: '/_authenticated/admin/zones/$zoneId/'
       path: '/admin/zones/$zoneId'
@@ -539,6 +569,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMessagingPhoneBookPhonebookIdRoute: typeof AuthenticatedMessagingPhoneBookPhonebookIdRoute
   AuthenticatedZoneCellsCellIdRoute: typeof AuthenticatedZoneCellsCellIdRoute
   AuthenticatedAdminDepartmentsIndexRoute: typeof AuthenticatedAdminDepartmentsIndexRoute
+  AuthenticatedAdminLeadersIndexRoute: typeof AuthenticatedAdminLeadersIndexRoute
   AuthenticatedAdminZonesIndexRoute: typeof AuthenticatedAdminZonesIndexRoute
   AuthenticatedCellAttendanceIndexRoute: typeof AuthenticatedCellAttendanceIndexRoute
   AuthenticatedCellMembersIndexRoute: typeof AuthenticatedCellMembersIndexRoute
@@ -548,6 +579,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedZoneAttendanceIndexRoute: typeof AuthenticatedZoneAttendanceIndexRoute
   AuthenticatedZoneCellsIndexRoute: typeof AuthenticatedZoneCellsIndexRoute
   AuthenticatedAdminZonesZoneIdCellIdRoute: typeof AuthenticatedAdminZonesZoneIdCellIdRoute
+  AuthenticatedAdminDepartmentsAttendanceIndexRoute: typeof AuthenticatedAdminDepartmentsAttendanceIndexRoute
   AuthenticatedAdminZonesZoneIdIndexRoute: typeof AuthenticatedAdminZonesZoneIdIndexRoute
   AuthenticatedAdminZonesAttendanceIndexRoute: typeof AuthenticatedAdminZonesAttendanceIndexRoute
 }
@@ -571,6 +603,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedZoneCellsCellIdRoute: AuthenticatedZoneCellsCellIdRoute,
   AuthenticatedAdminDepartmentsIndexRoute:
     AuthenticatedAdminDepartmentsIndexRoute,
+  AuthenticatedAdminLeadersIndexRoute: AuthenticatedAdminLeadersIndexRoute,
   AuthenticatedAdminZonesIndexRoute: AuthenticatedAdminZonesIndexRoute,
   AuthenticatedCellAttendanceIndexRoute: AuthenticatedCellAttendanceIndexRoute,
   AuthenticatedCellMembersIndexRoute: AuthenticatedCellMembersIndexRoute,
@@ -584,6 +617,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedZoneCellsIndexRoute: AuthenticatedZoneCellsIndexRoute,
   AuthenticatedAdminZonesZoneIdCellIdRoute:
     AuthenticatedAdminZonesZoneIdCellIdRoute,
+  AuthenticatedAdminDepartmentsAttendanceIndexRoute:
+    AuthenticatedAdminDepartmentsAttendanceIndexRoute,
   AuthenticatedAdminZonesZoneIdIndexRoute:
     AuthenticatedAdminZonesZoneIdIndexRoute,
   AuthenticatedAdminZonesAttendanceIndexRoute:
@@ -636,6 +671,7 @@ export interface FileRoutesByFullPath {
   '/messaging/phone-book/$phonebookId': typeof AuthenticatedMessagingPhoneBookPhonebookIdRoute
   '/zone/cells/$cellId': typeof AuthenticatedZoneCellsCellIdRoute
   '/admin/departments': typeof AuthenticatedAdminDepartmentsIndexRoute
+  '/admin/leaders': typeof AuthenticatedAdminLeadersIndexRoute
   '/admin/zones': typeof AuthenticatedAdminZonesIndexRoute
   '/cell/attendance': typeof AuthenticatedCellAttendanceIndexRoute
   '/cell/members': typeof AuthenticatedCellMembersIndexRoute
@@ -645,6 +681,7 @@ export interface FileRoutesByFullPath {
   '/zone/attendance': typeof AuthenticatedZoneAttendanceIndexRoute
   '/zone/cells': typeof AuthenticatedZoneCellsIndexRoute
   '/admin/zones/$zoneId/$cellId': typeof AuthenticatedAdminZonesZoneIdCellIdRoute
+  '/admin/departments/attendance': typeof AuthenticatedAdminDepartmentsAttendanceIndexRoute
   '/admin/zones/$zoneId': typeof AuthenticatedAdminZonesZoneIdIndexRoute
   '/admin/zones/attendance': typeof AuthenticatedAdminZonesAttendanceIndexRoute
 }
@@ -670,6 +707,7 @@ export interface FileRoutesByTo {
   '/messaging/phone-book/$phonebookId': typeof AuthenticatedMessagingPhoneBookPhonebookIdRoute
   '/zone/cells/$cellId': typeof AuthenticatedZoneCellsCellIdRoute
   '/admin/departments': typeof AuthenticatedAdminDepartmentsIndexRoute
+  '/admin/leaders': typeof AuthenticatedAdminLeadersIndexRoute
   '/admin/zones': typeof AuthenticatedAdminZonesIndexRoute
   '/cell/attendance': typeof AuthenticatedCellAttendanceIndexRoute
   '/cell/members': typeof AuthenticatedCellMembersIndexRoute
@@ -679,6 +717,7 @@ export interface FileRoutesByTo {
   '/zone/attendance': typeof AuthenticatedZoneAttendanceIndexRoute
   '/zone/cells': typeof AuthenticatedZoneCellsIndexRoute
   '/admin/zones/$zoneId/$cellId': typeof AuthenticatedAdminZonesZoneIdCellIdRoute
+  '/admin/departments/attendance': typeof AuthenticatedAdminDepartmentsAttendanceIndexRoute
   '/admin/zones/$zoneId': typeof AuthenticatedAdminZonesZoneIdIndexRoute
   '/admin/zones/attendance': typeof AuthenticatedAdminZonesAttendanceIndexRoute
 }
@@ -707,6 +746,7 @@ export interface FileRoutesById {
   '/_authenticated/messaging/phone-book/$phonebookId': typeof AuthenticatedMessagingPhoneBookPhonebookIdRoute
   '/_authenticated/zone/cells/$cellId': typeof AuthenticatedZoneCellsCellIdRoute
   '/_authenticated/admin/departments/': typeof AuthenticatedAdminDepartmentsIndexRoute
+  '/_authenticated/admin/leaders/': typeof AuthenticatedAdminLeadersIndexRoute
   '/_authenticated/admin/zones/': typeof AuthenticatedAdminZonesIndexRoute
   '/_authenticated/cell/attendance/': typeof AuthenticatedCellAttendanceIndexRoute
   '/_authenticated/cell/members/': typeof AuthenticatedCellMembersIndexRoute
@@ -716,6 +756,7 @@ export interface FileRoutesById {
   '/_authenticated/zone/attendance/': typeof AuthenticatedZoneAttendanceIndexRoute
   '/_authenticated/zone/cells/': typeof AuthenticatedZoneCellsIndexRoute
   '/_authenticated/admin/zones/$zoneId/$cellId': typeof AuthenticatedAdminZonesZoneIdCellIdRoute
+  '/_authenticated/admin/departments/attendance/': typeof AuthenticatedAdminDepartmentsAttendanceIndexRoute
   '/_authenticated/admin/zones/$zoneId/': typeof AuthenticatedAdminZonesZoneIdIndexRoute
   '/_authenticated/admin/zones/attendance/': typeof AuthenticatedAdminZonesAttendanceIndexRoute
 }
@@ -745,6 +786,7 @@ export interface FileRouteTypes {
     | '/messaging/phone-book/$phonebookId'
     | '/zone/cells/$cellId'
     | '/admin/departments'
+    | '/admin/leaders'
     | '/admin/zones'
     | '/cell/attendance'
     | '/cell/members'
@@ -754,6 +796,7 @@ export interface FileRouteTypes {
     | '/zone/attendance'
     | '/zone/cells'
     | '/admin/zones/$zoneId/$cellId'
+    | '/admin/departments/attendance'
     | '/admin/zones/$zoneId'
     | '/admin/zones/attendance'
   fileRoutesByTo: FileRoutesByTo
@@ -778,6 +821,7 @@ export interface FileRouteTypes {
     | '/messaging/phone-book/$phonebookId'
     | '/zone/cells/$cellId'
     | '/admin/departments'
+    | '/admin/leaders'
     | '/admin/zones'
     | '/cell/attendance'
     | '/cell/members'
@@ -787,6 +831,7 @@ export interface FileRouteTypes {
     | '/zone/attendance'
     | '/zone/cells'
     | '/admin/zones/$zoneId/$cellId'
+    | '/admin/departments/attendance'
     | '/admin/zones/$zoneId'
     | '/admin/zones/attendance'
   id:
@@ -813,6 +858,7 @@ export interface FileRouteTypes {
     | '/_authenticated/messaging/phone-book/$phonebookId'
     | '/_authenticated/zone/cells/$cellId'
     | '/_authenticated/admin/departments/'
+    | '/_authenticated/admin/leaders/'
     | '/_authenticated/admin/zones/'
     | '/_authenticated/cell/attendance/'
     | '/_authenticated/cell/members/'
@@ -822,6 +868,7 @@ export interface FileRouteTypes {
     | '/_authenticated/zone/attendance/'
     | '/_authenticated/zone/cells/'
     | '/_authenticated/admin/zones/$zoneId/$cellId'
+    | '/_authenticated/admin/departments/attendance/'
     | '/_authenticated/admin/zones/$zoneId/'
     | '/_authenticated/admin/zones/attendance/'
   fileRoutesById: FileRoutesById
@@ -867,6 +914,7 @@ export const routeTree = rootRoute
         "/_authenticated/messaging/phone-book/$phonebookId",
         "/_authenticated/zone/cells/$cellId",
         "/_authenticated/admin/departments/",
+        "/_authenticated/admin/leaders/",
         "/_authenticated/admin/zones/",
         "/_authenticated/cell/attendance/",
         "/_authenticated/cell/members/",
@@ -876,6 +924,7 @@ export const routeTree = rootRoute
         "/_authenticated/zone/attendance/",
         "/_authenticated/zone/cells/",
         "/_authenticated/admin/zones/$zoneId/$cellId",
+        "/_authenticated/admin/departments/attendance/",
         "/_authenticated/admin/zones/$zoneId/",
         "/_authenticated/admin/zones/attendance/"
       ]
@@ -974,6 +1023,10 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/admin/departments/index.ts",
       "parent": "/_authenticated"
     },
+    "/_authenticated/admin/leaders/": {
+      "filePath": "_authenticated/admin/leaders/index.tsx",
+      "parent": "/_authenticated"
+    },
     "/_authenticated/admin/zones/": {
       "filePath": "_authenticated/admin/zones/index.tsx",
       "parent": "/_authenticated"
@@ -1008,6 +1061,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/admin/zones/$zoneId/$cellId": {
       "filePath": "_authenticated/admin/zones/$zoneId/$cellId.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/admin/departments/attendance/": {
+      "filePath": "_authenticated/admin/departments/attendance/index.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/admin/zones/$zoneId/": {

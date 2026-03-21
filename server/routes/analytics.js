@@ -323,8 +323,6 @@ router.get('/analytics/status-summary', async (req, res) => {
 });
 
 // GET /analytics/leader-context?email=xxx
-// Returns the cell/zone context for a user identified by their email address.
-// Used when userExtraInfo.cellId or zonalId is not available after a role switch.
 router.get('/analytics/leader-context', async (req, res) => {
   try {
     const { email } = req.query;
@@ -342,7 +340,6 @@ router.get('/analytics/leader-context', async (req, res) => {
     const user = userRes.rows[0];
     let { CellId: cellId, ZoneId: zonalId } = user;
 
-    // Fall back to CellLeaders table if AspNetUsers.CellId is null
     if (!cellId) {
       const clRes = await pool.query(
         `SELECT "CellId" FROM "CellLeaders" WHERE "UserId" = $1 AND "IsAssistant" = false LIMIT 1`,
@@ -351,7 +348,6 @@ router.get('/analytics/leader-context', async (req, res) => {
       if (clRes.rows.length > 0) cellId = clRes.rows[0].CellId;
     }
 
-    // Fall back to ZonalLeaders table if AspNetUsers.ZoneId is null
     if (!zonalId) {
       const zlRes = await pool.query(
         `SELECT "ZoneId" FROM "ZonalLeaders" WHERE "UserId" = $1 LIMIT 1`,
@@ -363,6 +359,540 @@ router.get('/analytics/leader-context', async (req, res) => {
     res.json(wrapResult({ cellId: cellId ?? null, zonalId: zonalId ?? null, userId: user.Id }));
   } catch (err) {
     console.error('[leader context]', err.message);
+    res.status(500).json(errResult(err.message));
+  }
+});
+
+// ─── NEW: Admin Dept Attendance Summary ───────────────────────────────────────
+// GET /analytics/admin/dept-attendance?period=1&StartAt=&EndAt=
+// Returns all departments with their attendance summary grouped by period.
+// Attendance records are linked via DepartmentalLeaderId → Departments.DepartmentLeaderId.
+router.get('/analytics/admin/dept-attendance', async (req, res) => {
+  try {
+    const { period = '2', StartAt, EndAt } = req.query;
+    const key = `admin-dept-attendance:${period}:${StartAt ?? ''}:${EndAt ?? ''}`;
+
+    const data = await cached(key, async () => {
+      const labelExpr = getLabelExpr(period);
+      const groupExpr = getGroupExpr(period);
+
+      let dateFrom = getDateFrom(period);
+      let dateTo = new Date();
+      if (StartAt) dateFrom = new Date(StartAt);
+      if (EndAt) dateTo = new Date(EndAt);
+
+      // Fetch all departments with their leaders
+      const deptsRes = await pool.query(`
+        SELECT
+          d."Id"   AS dept_id,
+          d."Name" AS dept_name,
+          d."IsActive",
+          u."Id"          AS leader_id,
+          u."FirstName" || ' ' || u."LastName" AS leader_name,
+          u."Email"        AS leader_email,
+          u."PhoneNumber"  AS leader_phone,
+          u."UpdatedAt"    AS leader_last_login
+        FROM "Departments" d
+        LEFT JOIN "AspNetUsers" u ON u."Id" = d."DepartmentLeaderId"
+        ORDER BY d."Name"
+      `);
+
+      // Fetch attendance grouped by DepartmentalLeaderId + period label
+      const attRes = await pool.query(`
+        SELECT
+          da."DepartmentalLeaderId" AS leader_id,
+          ${labelExpr}              AS period_label,
+          ${groupExpr}              AS period_sort,
+          COUNT(*)::int                                                    AS total,
+          COUNT(CASE WHEN s."AttendanceStatus" = 1 THEN 1 END)::int       AS sunday_present,
+          COUNT(CASE WHEN s."AttendanceStatus" = 2 THEN 1 END)::int       AS sunday_absent,
+          COUNT(CASE WHEN t."AttendanceStatus" = 1 THEN 1 END)::int       AS tuesday_present,
+          COUNT(CASE WHEN t."AttendanceStatus" = 2 THEN 1 END)::int       AS tuesday_absent,
+          ROUND(COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
+          ROUND(COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct
+        FROM "DepartmentAttendances" da
+        JOIN "Sunday"  s ON da."SundayServiceId"  = s."Id"
+        JOIN "Tuesday" t ON da."TuesdayServiceId" = t."Id"
+        WHERE s."SundayService" >= $1 AND s."SundayService" <= $2
+        GROUP BY da."DepartmentalLeaderId", ${labelExpr}, ${groupExpr}
+        ORDER BY ${groupExpr} ASC
+      `, [dateFrom, dateTo]);
+
+      // Fetch overall totals per leader
+      const totalsRes = await pool.query(`
+        SELECT
+          da."DepartmentalLeaderId" AS leader_id,
+          COUNT(*)::int AS total,
+          ROUND(COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
+          ROUND(COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct,
+          ROUND((COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)+COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END))*100.0/NULLIF(COUNT(*)*2,0),2) AS overall_pct
+        FROM "DepartmentAttendances" da
+        JOIN "Sunday"  s ON da."SundayServiceId"  = s."Id"
+        JOIN "Tuesday" t ON da."TuesdayServiceId" = t."Id"
+        WHERE s."SundayService" >= $1 AND s."SundayService" <= $2
+        GROUP BY da."DepartmentalLeaderId"
+      `, [dateFrom, dateTo]);
+
+      // Build lookup maps
+      const periodByLeader = {};
+      for (const row of attRes.rows) {
+        if (!periodByLeader[row.leader_id]) periodByLeader[row.leader_id] = [];
+        periodByLeader[row.leader_id].push({
+          label:          row.period_label,
+          total:          row.total,
+          sundayPresent:  row.sunday_present,
+          sundayAbsent:   row.sunday_absent,
+          tuesdayPresent: row.tuesday_present,
+          tuesdayAbsent:  row.tuesday_absent,
+          sundayPct:      parseFloat(row.sunday_pct  ?? 0),
+          tuesdayPct:     parseFloat(row.tuesday_pct ?? 0)
+        });
+      }
+
+      const totalsByLeader = {};
+      for (const row of totalsRes.rows) {
+        totalsByLeader[row.leader_id] = {
+          total:      row.total,
+          sundayPct:  parseFloat(row.sunday_pct  ?? 0),
+          tuesdayPct: parseFloat(row.tuesday_pct ?? 0),
+          overallPct: parseFloat(row.overall_pct ?? 0)
+        };
+      }
+
+      // Merge departments with attendance
+      return deptsRes.rows.map(dept => ({
+        departmentId:  dept.dept_id,
+        name:          dept.dept_name,
+        isActive:      dept.IsActive,
+        leader: dept.leader_id ? {
+          id:        dept.leader_id,
+          name:      dept.leader_name,
+          email:     dept.leader_email,
+          phone:     dept.leader_phone,
+          lastLogin: dept.leader_last_login
+        } : null,
+        summary: totalsByLeader[dept.leader_id] ?? { total: 0, sundayPct: 0, tuesdayPct: 0, overallPct: 0 },
+        periodData: periodByLeader[dept.leader_id] ?? []
+      }));
+    });
+
+    res.json(wrapResult(data));
+  } catch (err) {
+    console.error('[admin dept-attendance]', err.message);
+    res.status(500).json(errResult(err.message));
+  }
+});
+
+// ─── NEW: Admin Zones Overview ─────────────────────────────────────────────────
+// GET /analytics/admin/zones-overview?period=1
+// All zones with cells, leaders (incl. last login), member counts, and KPI performance.
+router.get('/analytics/admin/zones-overview', async (req, res) => {
+  try {
+    const { period = '2' } = req.query;
+    const key = `admin-zones-overview:${period}`;
+
+    const data = await cached(key, async () => {
+      const dateFrom = getDateFrom(period);
+
+      // All zones with zonal leaders
+      const zonesRes = await pool.query(`
+        SELECT
+          z."Id"       AS zone_id,
+          z."Name"     AS zone_name,
+          z."ZoneStatus",
+          u."Id"       AS leader_id,
+          u."FirstName" || ' ' || u."LastName" AS leader_name,
+          u."Email"    AS leader_email,
+          u."PhoneNumber" AS leader_phone,
+          u."UpdatedAt"   AS leader_last_login,
+          COUNT(DISTINCT c."Id")::int AS cell_count,
+          COUNT(DISTINCT m."Id")::int AS member_count
+        FROM "Zones" z
+        LEFT JOIN "ZonalLeaders" zl ON zl."ZoneId" = z."Id"
+        LEFT JOIN "AspNetUsers" u  ON u."Id" = zl."UserId"
+        LEFT JOIN "Cells" c        ON c."ZoneId" = z."Id"
+        LEFT JOIN "Members" m      ON m."ZoneId" = z."Id"
+        GROUP BY z."Id", z."Name", z."ZoneStatus",
+                 u."Id", u."FirstName", u."LastName", u."Email", u."PhoneNumber", u."UpdatedAt"
+        ORDER BY z."Name"
+      `);
+
+      // All cells with their leaders
+      const cellsRes = await pool.query(`
+        SELECT
+          c."Id"     AS cell_id,
+          c."Name"   AS cell_name,
+          c."ZoneId" AS zone_id,
+          c."CellStatus",
+          u."Id"     AS leader_id,
+          u."FirstName" || ' ' || u."LastName" AS leader_name,
+          u."Email"  AS leader_email,
+          u."PhoneNumber" AS leader_phone,
+          u."UpdatedAt"   AS leader_last_login,
+          cl."IsAssistant",
+          COUNT(DISTINCT m."Id")::int AS member_count
+        FROM "Cells" c
+        LEFT JOIN "CellLeaders" cl ON cl."CellId" = c."Id" AND cl."IsAssistant" = false
+        LEFT JOIN "AspNetUsers" u  ON u."Id" = cl."UserId"
+        LEFT JOIN "Members" m      ON m."CellId" = c."Id"
+        GROUP BY c."Id", c."Name", c."ZoneId", c."CellStatus",
+                 u."Id", u."FirstName", u."LastName", u."Email", u."PhoneNumber", u."UpdatedAt", cl."IsAssistant"
+        ORDER BY c."Name"
+      `);
+
+      // Zone-level performance
+      const zonePerfRes = await pool.query(`
+        SELECT
+          ca."ZoneId" AS zone_id,
+          ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
+          ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct,
+          ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS cell_pct,
+          COUNT(*)::int AS total_records
+        FROM "CellAttendance" ca
+        JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
+        JOIN "Tuesday"     t  ON ca."TuesdayServiceId" = t."Id"
+        JOIN "CellMeeting" cm ON ca."CellMeetingId"    = cm."Id"
+        WHERE s."SundayService" >= $1
+        GROUP BY ca."ZoneId"
+      `, [dateFrom]);
+
+      // Cell-level performance
+      const cellPerfRes = await pool.query(`
+        SELECT
+          ca."CellId" AS cell_id,
+          ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
+          ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct,
+          ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS cell_pct,
+          COUNT(*)::int AS total_records
+        FROM "CellAttendance" ca
+        JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
+        JOIN "Tuesday"     t  ON ca."TuesdayServiceId" = t."Id"
+        JOIN "CellMeeting" cm ON ca."CellMeetingId"    = cm."Id"
+        WHERE s."SundayService" >= $1
+        GROUP BY ca."CellId"
+      `, [dateFrom]);
+
+      // Build lookup maps
+      const zonePerf = {};
+      for (const r of zonePerfRes.rows) {
+        zonePerf[r.zone_id] = {
+          sundayPct:    parseFloat(r.sunday_pct  ?? 0),
+          tuesdayPct:   parseFloat(r.tuesday_pct ?? 0),
+          cellPct:      parseFloat(r.cell_pct    ?? 0),
+          totalRecords: r.total_records
+        };
+      }
+
+      const cellPerf = {};
+      for (const r of cellPerfRes.rows) {
+        cellPerf[r.cell_id] = {
+          sundayPct:    parseFloat(r.sunday_pct  ?? 0),
+          tuesdayPct:   parseFloat(r.tuesday_pct ?? 0),
+          cellPct:      parseFloat(r.cell_pct    ?? 0),
+          totalRecords: r.total_records
+        };
+      }
+
+      // Group cells by zone
+      const cellsByZone = {};
+      for (const c of cellsRes.rows) {
+        if (!cellsByZone[c.zone_id]) cellsByZone[c.zone_id] = [];
+        cellsByZone[c.zone_id].push({
+          cellId:      c.cell_id,
+          name:        c.cell_name,
+          cellStatus:  c.CellStatus,
+          memberCount: c.member_count,
+          leader: c.leader_id ? {
+            id:        c.leader_id,
+            name:      c.leader_name,
+            email:     c.leader_email,
+            phone:     c.leader_phone,
+            lastLogin: c.leader_last_login
+          } : null,
+          performance: cellPerf[c.cell_id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0, totalRecords: 0 }
+        });
+      }
+
+      // Build final zones array
+      return zonesRes.rows.map(z => ({
+        zoneId:      z.zone_id,
+        name:        z.zone_name,
+        zoneStatus:  z.ZoneStatus,
+        cellCount:   z.cell_count,
+        memberCount: z.member_count,
+        leader: z.leader_id ? {
+          id:        z.leader_id,
+          name:      z.leader_name,
+          email:     z.leader_email,
+          phone:     z.leader_phone,
+          lastLogin: z.leader_last_login
+        } : null,
+        performance: zonePerf[z.zone_id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0, totalRecords: 0 },
+        cells: cellsByZone[z.zone_id] ?? []
+      }));
+    });
+
+    res.json(wrapResult(data));
+  } catch (err) {
+    console.error('[admin zones-overview]', err.message);
+    res.status(500).json(errResult(err.message));
+  }
+});
+
+// ─── NEW: Admin Dept Overview ──────────────────────────────────────────────────
+// GET /analytics/admin/dept-overview?period=1
+// All departments with leader (incl. last login), member counts, and KPI performance.
+router.get('/analytics/admin/dept-overview', async (req, res) => {
+  try {
+    const { period = '2' } = req.query;
+    const key = `admin-dept-overview:${period}`;
+
+    const data = await cached(key, async () => {
+      const dateFrom = getDateFrom(period);
+
+      // All departments with leaders
+      const deptsRes = await pool.query(`
+        SELECT
+          d."Id"     AS dept_id,
+          d."Name"   AS dept_name,
+          d."IsActive",
+          d."AssistDepartmentLeaderIds",
+          u."Id"     AS leader_id,
+          u."FirstName" || ' ' || u."LastName" AS leader_name,
+          u."Email"  AS leader_email,
+          u."PhoneNumber" AS leader_phone,
+          u."UpdatedAt"   AS leader_last_login
+        FROM "Departments" d
+        LEFT JOIN "AspNetUsers" u ON u."Id" = d."DepartmentLeaderId"
+        ORDER BY d."Name"
+      `);
+
+      // Dept performance via DepartmentalLeaderId → Departments.DepartmentLeaderId
+      const deptPerfRes = await pool.query(`
+        SELECT
+          da."DepartmentalLeaderId" AS leader_id,
+          COUNT(*)::int AS total_records,
+          ROUND(COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
+          ROUND(COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct,
+          ROUND((COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)+COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END))*100.0/NULLIF(COUNT(*)*2,0),2) AS overall_pct
+        FROM "DepartmentAttendances" da
+        JOIN "Sunday"  s ON da."SundayServiceId"  = s."Id"
+        JOIN "Tuesday" t ON da."TuesdayServiceId" = t."Id"
+        WHERE s."SundayService" >= $1
+        GROUP BY da."DepartmentalLeaderId"
+      `, [dateFrom]);
+
+      const perfByLeader = {};
+      for (const r of deptPerfRes.rows) {
+        perfByLeader[r.leader_id] = {
+          totalRecords: r.total_records,
+          sundayPct:    parseFloat(r.sunday_pct  ?? 0),
+          tuesdayPct:   parseFloat(r.tuesday_pct ?? 0),
+          overallPct:   parseFloat(r.overall_pct ?? 0)
+        };
+      }
+
+      // Get assistant leaders for all departments
+      const allAssistIds = [];
+      const deptAssistMap = {};
+      for (const d of deptsRes.rows) {
+        if (d.AssistDepartmentLeaderIds) {
+          const ids = d.AssistDepartmentLeaderIds.split(',').map(s => s.trim()).filter(Boolean);
+          deptAssistMap[d.dept_id] = ids;
+          allAssistIds.push(...ids);
+        }
+      }
+
+      let assistMap = {};
+      if (allAssistIds.length > 0) {
+        const placeholders = allAssistIds.map((_, i) => `$${i + 1}`).join(',');
+        const assistRes = await pool.query(
+          `SELECT "Id", "FirstName" || ' ' || "LastName" AS name, "Email", "PhoneNumber", "UpdatedAt"
+           FROM "AspNetUsers" WHERE "Id"::text IN (${placeholders})`,
+          allAssistIds
+        );
+        for (const u of assistRes.rows) {
+          assistMap[u.Id] = { id: u.Id, name: u.name, email: u.Email, phone: u.PhoneNumber, lastLogin: u.UpdatedAt };
+        }
+      }
+
+      return deptsRes.rows.map(d => ({
+        departmentId: d.dept_id,
+        name:         d.dept_name,
+        isActive:     d.IsActive,
+        leader: d.leader_id ? {
+          id:        d.leader_id,
+          name:      d.leader_name,
+          email:     d.leader_email,
+          phone:     d.leader_phone,
+          lastLogin: d.leader_last_login
+        } : null,
+        assistants: (deptAssistMap[d.dept_id] ?? []).map(id => assistMap[id]).filter(Boolean),
+        performance: perfByLeader[d.leader_id] ?? { totalRecords: 0, sundayPct: 0, tuesdayPct: 0, overallPct: 0 }
+      }));
+    });
+
+    res.json(wrapResult(data));
+  } catch (err) {
+    console.error('[admin dept-overview]', err.message);
+    res.status(500).json(errResult(err.message));
+  }
+});
+
+// ─── NEW: Admin Leaders Overview ───────────────────────────────────────────────
+// GET /analytics/admin/leaders
+// All leaders (zonal, cell, dept + assistants) with last login and performance.
+router.get('/analytics/admin/leaders', async (req, res) => {
+  try {
+    const { period = '2' } = req.query;
+    const key = `admin-leaders:${period}`;
+
+    const data = await cached(key, async () => {
+      const dateFrom = getDateFrom(period);
+
+      // Zonal leaders
+      const zonalRes = await pool.query(`
+        SELECT
+          u."Id",
+          u."FirstName" || ' ' || u."LastName" AS name,
+          u."Email", u."PhoneNumber", u."UpdatedAt" AS last_login,
+          z."Id" AS zone_id, z."Name" AS zone_name,
+          COUNT(DISTINCT c."Id")::int AS cell_count,
+          COUNT(DISTINCT m."Id")::int AS member_count
+        FROM "ZonalLeaders" zl
+        JOIN "AspNetUsers" u ON u."Id" = zl."UserId"
+        JOIN "Zones" z       ON z."Id" = zl."ZoneId"
+        LEFT JOIN "Cells" c  ON c."ZoneId" = z."Id"
+        LEFT JOIN "Members" m ON m."ZoneId" = z."Id"
+        GROUP BY u."Id", u."FirstName", u."LastName", u."Email", u."PhoneNumber", u."UpdatedAt",
+                 z."Id", z."Name"
+        ORDER BY u."UpdatedAt" DESC NULLS LAST
+      `);
+
+      // Cell leaders (incl. assistants)
+      const cellRes = await pool.query(`
+        SELECT
+          u."Id",
+          u."FirstName" || ' ' || u."LastName" AS name,
+          u."Email", u."PhoneNumber", u."UpdatedAt" AS last_login,
+          c."Id" AS cell_id, c."Name" AS cell_name,
+          z."Id" AS zone_id, z."Name" AS zone_name,
+          cl."IsAssistant",
+          COUNT(DISTINCT m."Id")::int AS member_count
+        FROM "CellLeaders" cl
+        JOIN "AspNetUsers" u ON u."Id" = cl."UserId"
+        JOIN "Cells" c       ON c."Id" = cl."CellId"
+        JOIN "Zones" z       ON z."Id" = c."ZoneId"
+        LEFT JOIN "Members" m ON m."CellId" = c."Id"
+        GROUP BY u."Id", u."FirstName", u."LastName", u."Email", u."PhoneNumber", u."UpdatedAt",
+                 c."Id", c."Name", z."Id", z."Name", cl."IsAssistant"
+        ORDER BY cl."IsAssistant" ASC, u."UpdatedAt" DESC NULLS LAST
+      `);
+
+      // Dept leaders + assistants
+      const deptsRes = await pool.query(`
+        SELECT d."Id" AS dept_id, d."Name" AS dept_name, d."AssistDepartmentLeaderIds",
+               u."Id" AS leader_id, u."FirstName" || ' ' || u."LastName" AS leader_name,
+               u."Email", u."PhoneNumber", u."UpdatedAt"
+        FROM "Departments" d
+        LEFT JOIN "AspNetUsers" u ON u."Id" = d."DepartmentLeaderId"
+        ORDER BY d."Name"
+      `);
+
+      const allAssistIds = [];
+      const deptForAssist = {};
+      for (const d of deptsRes.rows) {
+        if (d.AssistDepartmentLeaderIds) {
+          const ids = d.AssistDepartmentLeaderIds.split(',').map(s => s.trim()).filter(Boolean);
+          for (const id of ids) { deptForAssist[id] = { dept_id: d.dept_id, dept_name: d.dept_name }; allAssistIds.push(id); }
+        }
+      }
+
+      let assistLeaders = [];
+      if (allAssistIds.length > 0) {
+        const ph = allAssistIds.map((_, i) => `$${i + 1}`).join(',');
+        const aRes = await pool.query(
+          `SELECT "Id", "FirstName" || ' ' || "LastName" AS name, "Email", "PhoneNumber", "UpdatedAt" FROM "AspNetUsers" WHERE "Id"::text IN (${ph})`,
+          allAssistIds
+        );
+        assistLeaders = aRes.rows.map(u => ({
+          id: u.Id, name: u.name, email: u.Email, phone: u.PhoneNumber, lastLogin: u.UpdatedAt,
+          department: deptForAssist[u.Id]?.dept_name ?? '',
+          departmentId: deptForAssist[u.Id]?.dept_id ?? '',
+          isAssistant: true
+        }));
+      }
+
+      // Cell perf per leader
+      const cellPerfRes = await pool.query(`
+        SELECT
+          cl."UserId" AS user_id,
+          ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
+          ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct,
+          ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS cell_pct
+        FROM "CellLeaders" cl
+        JOIN "CellAttendance" ca ON ca."CellId" = cl."CellId"
+        JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
+        JOIN "Tuesday"     t  ON ca."TuesdayServiceId" = t."Id"
+        JOIN "CellMeeting" cm ON ca."CellMeetingId"    = cm."Id"
+        WHERE s."SundayService" >= $1
+        GROUP BY cl."UserId"
+      `, [dateFrom]);
+
+      const cellPerfMap = {};
+      for (const r of cellPerfRes.rows) {
+        cellPerfMap[r.user_id] = { sundayPct: parseFloat(r.sunday_pct ?? 0), tuesdayPct: parseFloat(r.tuesday_pct ?? 0), cellPct: parseFloat(r.cell_pct ?? 0) };
+      }
+
+      // Zone perf per leader
+      const zonePerfRes = await pool.query(`
+        SELECT
+          zl."UserId" AS user_id,
+          ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
+          ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct,
+          ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS cell_pct
+        FROM "ZonalLeaders" zl
+        JOIN "CellAttendance" ca ON ca."ZoneId" = zl."ZoneId"
+        JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
+        JOIN "Tuesday"     t  ON ca."TuesdayServiceId" = t."Id"
+        JOIN "CellMeeting" cm ON ca."CellMeetingId"    = cm."Id"
+        WHERE s."SundayService" >= $1
+        GROUP BY zl."UserId"
+      `, [dateFrom]);
+
+      const zonePerfMap = {};
+      for (const r of zonePerfRes.rows) {
+        zonePerfMap[r.user_id] = { sundayPct: parseFloat(r.sunday_pct ?? 0), tuesdayPct: parseFloat(r.tuesday_pct ?? 0), cellPct: parseFloat(r.cell_pct ?? 0) };
+      }
+
+      return {
+        zonalLeaders: zonalRes.rows.map(u => ({
+          id: u.Id, name: u.name, email: u.Email, phone: u.PhoneNumber, lastLogin: u.last_login,
+          zone: u.zone_name, zoneId: u.zone_id,
+          cellCount: u.cell_count, memberCount: u.member_count,
+          performance: zonePerfMap[u.Id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0 }
+        })),
+        cellLeaders: cellRes.rows.map(u => ({
+          id: u.Id, name: u.name, email: u.Email, phone: u.PhoneNumber, lastLogin: u.last_login,
+          cell: u.cell_name, cellId: u.cell_id, zone: u.zone_name, zoneId: u.zone_id,
+          isAssistant: u.IsAssistant, memberCount: u.member_count,
+          performance: cellPerfMap[u.Id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0 }
+        })),
+        deptLeaders: [
+          ...deptsRes.rows
+            .filter(d => d.leader_id)
+            .map(d => ({
+              id: d.leader_id, name: d.leader_name, email: d.Email, phone: d.PhoneNumber,
+              lastLogin: d.UpdatedAt, department: d.dept_name, departmentId: d.dept_id, isAssistant: false
+            })),
+          ...assistLeaders
+        ].sort((a, b) => (b.lastLogin ?? '') > (a.lastLogin ?? '') ? 1 : -1)
+      };
+    });
+
+    res.json(wrapResult(data));
+  } catch (err) {
+    console.error('[admin leaders]', err.message);
     res.status(500).json(errResult(err.message));
   }
 });

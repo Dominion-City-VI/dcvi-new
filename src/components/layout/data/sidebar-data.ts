@@ -7,7 +7,8 @@ import {
   SettingsIcon,
   TableCellsMerge,
   Users,
-  Wallet2
+  Wallet2,
+  ShieldCheck
 } from 'lucide-react';
 
 export const sidebarData: SidebarData = {
@@ -141,10 +142,16 @@ export const sidebarData: SidebarData = {
             },
             {
               title: 'Attendance Overview',
-              url: '/department/deptAttendance',
+              url: '/admin/departments/attendance',
               rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
             }
           ]
+        },
+        {
+          title: 'Leaders',
+          icon: ShieldCheck,
+          url: '/admin/leaders',
+          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
         }
       ]
     },
