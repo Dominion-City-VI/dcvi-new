@@ -6,17 +6,26 @@ import AttendanceTable from './components/DepartmentAttendanceTable';
 import { useFetchAttendance } from '@/hooks/department/useFetchAttendance';
 import { useStore } from '@/store';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TAttendanceFilterSchema } from './attendanceFilterSchema';
+
+const EMPTY_FILTER: TAttendanceFilterSchema = {};
 
 const Attendance = () => {
   const {
-    AuthStore: { userExtraInfo, userRole },
-    CellStore: { attendanceQuery }
+    AuthStore: { userExtraInfo, userRole }
   } = useStore();
+
+  const [filter, setFilter] = useState<TAttendanceFilterSchema>(EMPTY_FILTER);
   const [cellAttendance, setCellAttendance] = useState<Array<TDeptAttendanceItem>>([]);
+
+  const isFiltered = Object.values(filter).some(
+    (v) => v !== undefined && v !== null && v !== ''
+  );
+
   const { data, isLoading, status } = useFetchAttendance({
     UserRole: userRole[0],
     Identifier: userExtraInfo.departmentId,
-    ...attendanceQuery
+    ...filter
   });
 
   useEffect(() => {
@@ -24,6 +33,14 @@ const Attendance = () => {
       setCellAttendance(data);
     }
   }, [isLoading, data]);
+
+  const handleApply = (data: TAttendanceFilterSchema) => {
+    setFilter(data);
+  };
+
+  const handleReset = () => {
+    setFilter(EMPTY_FILTER);
+  };
 
   return (
     <Main>
@@ -43,10 +60,19 @@ const Attendance = () => {
         </div>
       ) : status === 'error' ? (
         <div className="flex h-60 flex-col items-center justify-center gap-2 text-muted-foreground">
-          <p className="text-sm">Could not load attendance data. The server may be starting up — please try again shortly.</p>
+          <p className="text-sm">
+            Could not load attendance data. The server may be starting up — please try again
+            shortly.
+          </p>
         </div>
       ) : (
-        <AttendanceTable {...{ placeholder: 'Filter Members...', cellAttendance }} />
+        <AttendanceTable
+          placeholder="Filter Members..."
+          cellAttendance={cellAttendance}
+          isFiltered={isFiltered}
+          onApply={handleApply}
+          onReset={handleReset}
+        />
       )}
     </Main>
   );

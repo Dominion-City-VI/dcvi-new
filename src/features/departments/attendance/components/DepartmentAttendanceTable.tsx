@@ -26,14 +26,24 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/componen
 import { DataTablePagination } from '@/components/Pagination';
 import { createFullAttendanceColumns } from './columns';
 import DataTableToolbar from './TableToolbar';
+import { TAttendanceFilterSchema } from '../attendanceFilterSchema';
 import { observer } from 'mobx-react-lite';
 
 interface DataTableProps {
   cellAttendance: Array<TDeptAttendanceItem>;
   placeholder: string;
+  isFiltered: boolean;
+  onApply: (data: TAttendanceFilterSchema) => void;
+  onReset: () => void;
 }
 
-const DepartmentAttendanceTable = ({ cellAttendance, placeholder }: DataTableProps) => {
+const DepartmentAttendanceTable = ({
+  cellAttendance,
+  placeholder,
+  isFiltered,
+  onApply,
+  onReset
+}: DataTableProps) => {
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -94,7 +104,7 @@ const DepartmentAttendanceTable = ({ cellAttendance, placeholder }: DataTablePro
 
   return (
     <div className="space-y-4">
-      <DataTableToolbar {...{ placeholder, table }} />
+      <DataTableToolbar {...{ placeholder, isFiltered, onApply, onReset }} />
       <div className="rounded-md border">
         <div className="flex">
           <ResizablePanelGroup direction="horizontal">
