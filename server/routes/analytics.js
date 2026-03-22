@@ -77,9 +77,9 @@ async function getCellAttendanceData(period, extraWhere = '', extraParams = []) 
 
   const perfQ = `
     SELECT
-      ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*),0), 2) AS "sundayService",
-      ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*),0), 2) AS "tuesdayAttendance",
-      ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*),0), 2) AS "cellAttendance"
+      ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN s."AttendanceStatus"  NOT IN (0,6) THEN 1 END),0), 2) AS "sundayService",
+      ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN t."AttendanceStatus"  NOT IN (0,6) THEN 1 END),0), 2) AS "tuesdayAttendance",
+      ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN cm."AttendanceStatus" NOT IN (0,6) THEN 1 END),0), 2) AS "cellAttendance"
     ${baseFrom}
   `;
 
@@ -226,10 +226,10 @@ router.get('/analytics/service-summary', async (req, res) => {
           COUNT(DISTINCT CASE WHEN s."AttendanceStatus" = 1 THEN da."Id" END)::int AS "totalSunday",
           COUNT(DISTINCT CASE WHEN t."AttendanceStatus" = 1 THEN da."Id" END)::int AS "totalTuesday",
           0::int AS "totalCellAttendees",
-          ROUND(COUNT(DISTINCT CASE WHEN s."AttendanceStatus" = 1 THEN da."Id" END)*100.0/NULLIF(COUNT(DISTINCT da."Id"),0),2) AS "totalSundayPercentage",
-          ROUND(COUNT(DISTINCT CASE WHEN t."AttendanceStatus" = 1 THEN da."Id" END)*100.0/NULLIF(COUNT(DISTINCT da."Id"),0),2) AS "totalTuesdayPercentage",
+          ROUND(COUNT(DISTINCT CASE WHEN s."AttendanceStatus" = 1 THEN da."Id" END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN s."AttendanceStatus" NOT IN (0,6) THEN da."Id" END),0),2) AS "totalSundayPercentage",
+          ROUND(COUNT(DISTINCT CASE WHEN t."AttendanceStatus" = 1 THEN da."Id" END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN t."AttendanceStatus" NOT IN (0,6) THEN da."Id" END),0),2) AS "totalTuesdayPercentage",
           0::numeric AS "totalCellAttendeesPercentage",
-          ROUND((COUNT(DISTINCT CASE WHEN s."AttendanceStatus"=1 THEN da."Id" END)+COUNT(DISTINCT CASE WHEN t."AttendanceStatus"=1 THEN da."Id" END))*100.0/NULLIF(COUNT(DISTINCT da."Id")*2,0),2) AS "totalPercentage"
+          ROUND((COUNT(DISTINCT CASE WHEN s."AttendanceStatus"=1 THEN da."Id" END)+COUNT(DISTINCT CASE WHEN t."AttendanceStatus"=1 THEN da."Id" END))*100.0/NULLIF(COUNT(DISTINCT CASE WHEN s."AttendanceStatus" NOT IN (0,6) THEN da."Id" END)+COUNT(DISTINCT CASE WHEN t."AttendanceStatus" NOT IN (0,6) THEN da."Id" END),0),2) AS "totalPercentage"
         FROM "DepartmentAttendances" da
         JOIN "Sunday"  s ON da."SundayServiceId"  = s."Id"
         JOIN "Tuesday" t ON da."TuesdayServiceId" = t."Id"
@@ -240,10 +240,10 @@ router.get('/analytics/service-summary', async (req, res) => {
           COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)::int AS "totalSunday",
           COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)::int AS "totalTuesday",
           COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)::int AS "totalCellAttendees",
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2)  AS "totalSundayPercentage",
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2)  AS "totalTuesdayPercentage",
-          ROUND(COUNT(CASE WHEN cm."AttendanceStatus"= 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2)  AS "totalCellAttendeesPercentage",
-          ROUND((COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)+COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END)+COUNT(CASE WHEN cm."AttendanceStatus"=1 THEN 1 END))*100.0/NULLIF(COUNT(*)*3,0),2) AS "totalPercentage"
+          ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN s."AttendanceStatus"  NOT IN (0,6) THEN 1 END),0),2) AS "totalSundayPercentage",
+          ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN t."AttendanceStatus"  NOT IN (0,6) THEN 1 END),0),2) AS "totalTuesdayPercentage",
+          ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN cm."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS "totalCellAttendeesPercentage",
+          ROUND((COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)+COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END)+COUNT(CASE WHEN cm."AttendanceStatus"=1 THEN 1 END))*100.0/NULLIF(COUNT(CASE WHEN s."AttendanceStatus" NOT IN (0,6) THEN 1 END)+COUNT(CASE WHEN t."AttendanceStatus" NOT IN (0,6) THEN 1 END)+COUNT(CASE WHEN cm."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS "totalPercentage"
         FROM "CellAttendance" ca
         JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
         JOIN "Tuesday"     t  ON ca."TuesdayServiceId" = t."Id"
@@ -409,8 +409,8 @@ router.get('/analytics/admin/dept-attendance', async (req, res) => {
           COUNT(CASE WHEN s."AttendanceStatus" = 2 THEN 1 END)::int       AS sunday_absent,
           COUNT(CASE WHEN t."AttendanceStatus" = 1 THEN 1 END)::int       AS tuesday_present,
           COUNT(CASE WHEN t."AttendanceStatus" = 2 THEN 1 END)::int       AS tuesday_absent,
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct
+          ROUND(COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN s."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS sunday_pct,
+          ROUND(COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN t."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS tuesday_pct
         FROM "DepartmentAttendances" da
         JOIN "Sunday"  s ON da."SundayServiceId"  = s."Id"
         JOIN "Tuesday" t ON da."TuesdayServiceId" = t."Id"
@@ -424,9 +424,9 @@ router.get('/analytics/admin/dept-attendance', async (req, res) => {
         SELECT
           da."DepartmentalLeaderId" AS leader_id,
           COUNT(*)::int AS total,
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct,
-          ROUND((COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)+COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END))*100.0/NULLIF(COUNT(*)*2,0),2) AS overall_pct
+          ROUND(COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN s."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS sunday_pct,
+          ROUND(COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN t."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS tuesday_pct,
+          ROUND((COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)+COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END))*100.0/NULLIF(COUNT(CASE WHEN s."AttendanceStatus" NOT IN (0,6) THEN 1 END)+COUNT(CASE WHEN t."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS overall_pct
         FROM "DepartmentAttendances" da
         JOIN "Sunday"  s ON da."SundayServiceId"  = s."Id"
         JOIN "Tuesday" t ON da."TuesdayServiceId" = t."Id"
@@ -545,9 +545,9 @@ router.get('/analytics/admin/zones-overview', async (req, res) => {
       const zonePerfRes = await pool.query(`
         SELECT
           ca."ZoneId" AS zone_id,
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct,
-          ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS cell_pct,
+          ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN s."AttendanceStatus"  NOT IN (0,6) THEN 1 END),0),2) AS sunday_pct,
+          ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN t."AttendanceStatus"  NOT IN (0,6) THEN 1 END),0),2) AS tuesday_pct,
+          ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN cm."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS cell_pct,
           COUNT(*)::int AS total_records
         FROM "CellAttendance" ca
         JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
@@ -561,9 +561,9 @@ router.get('/analytics/admin/zones-overview', async (req, res) => {
       const cellPerfRes = await pool.query(`
         SELECT
           ca."CellId" AS cell_id,
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct,
-          ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS cell_pct,
+          ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN s."AttendanceStatus"  NOT IN (0,6) THEN 1 END),0),2) AS sunday_pct,
+          ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN t."AttendanceStatus"  NOT IN (0,6) THEN 1 END),0),2) AS tuesday_pct,
+          ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN cm."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS cell_pct,
           COUNT(*)::int AS total_records
         FROM "CellAttendance" ca
         JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
@@ -673,9 +673,9 @@ router.get('/analytics/admin/dept-overview', async (req, res) => {
         SELECT
           da."DepartmentalLeaderId" AS leader_id,
           COUNT(*)::int AS total_records,
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS sunday_pct,
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS tuesday_pct,
-          ROUND((COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)+COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END))*100.0/NULLIF(COUNT(*)*2,0),2) AS overall_pct
+          ROUND(COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN s."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS sunday_pct,
+          ROUND(COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN t."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS tuesday_pct,
+          ROUND((COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)+COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END))*100.0/NULLIF(COUNT(CASE WHEN s."AttendanceStatus" NOT IN (0,6) THEN 1 END)+COUNT(CASE WHEN t."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS overall_pct
         FROM "DepartmentAttendances" da
         JOIN "Sunday"  s ON da."SundayServiceId"  = s."Id"
         JOIN "Tuesday" t ON da."TuesdayServiceId" = t."Id"
@@ -832,9 +832,9 @@ router.get('/analytics/admin/leaders', async (req, res) => {
           COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)                        ::int     AS sunday_present,
           COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)                        ::int     AS tuesday_present,
           COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)                        ::int     AS cell_present,
-          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS sunday_pct,
-          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS tuesday_pct,
-          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS cell_pct
+          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE s."AttendanceStatus"  NOT IN (0,6)), 0), 2) AS sunday_pct,
+          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE t."AttendanceStatus"  NOT IN (0,6)), 0), 2) AS tuesday_pct,
+          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE cm."AttendanceStatus" NOT IN (0,6)), 0), 2) AS cell_pct
         FROM "DepartmentAttendances" da
         JOIN "Sunday"      s  ON da."SundayServiceId"  = s."Id"
         JOIN "Tuesday"     t  ON da."TuesdayServiceId" = t."Id"
@@ -864,9 +864,9 @@ router.get('/analytics/admin/leaders', async (req, res) => {
           COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)                         ::int     AS sunday_present,
           COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)                         ::int     AS tuesday_present,
           COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)                         ::int     AS cell_present,
-          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS sunday_pct,
-          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS tuesday_pct,
-          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS cell_pct
+          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE s."AttendanceStatus"  NOT IN (0,6)), 0), 2) AS sunday_pct,
+          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE t."AttendanceStatus"  NOT IN (0,6)), 0), 2) AS tuesday_pct,
+          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE cm."AttendanceStatus" NOT IN (0,6)), 0), 2) AS cell_pct
         FROM "CellLeaders" cl
         JOIN "CellAttendance" ca ON ca."CellId" = cl."CellId"
         JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
@@ -899,9 +899,9 @@ router.get('/analytics/admin/leaders', async (req, res) => {
           COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)                         ::int     AS tuesday_present,
           COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)                         ::int     AS cell_present,
           COUNT(DISTINCT ca."CellId")                                               ::int     AS contributing_cells,
-          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS sunday_pct,
-          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS tuesday_pct,
-          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS cell_pct
+          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE s."AttendanceStatus"  NOT IN (0,6)), 0), 2) AS sunday_pct,
+          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE t."AttendanceStatus"  NOT IN (0,6)), 0), 2) AS tuesday_pct,
+          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE cm."AttendanceStatus" NOT IN (0,6)), 0), 2) AS cell_pct
         FROM "ZonalLeaders" zl
         JOIN "CellAttendance" ca ON ca."ZoneId" = zl."ZoneId"
         JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
@@ -987,9 +987,9 @@ router.get('/analytics/admin/overview', async (req, res) => {
             COUNT(*) FILTER (WHERE s."AttendanceStatus" = 1)             ::int  AS sunday_present,
             COUNT(*) FILTER (WHERE t."AttendanceStatus" = 1)             ::int  AS tuesday_present,
             COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)            ::int  AS cell_present,
-            ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS sunday_pct,
-            ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS tuesday_pct,
-            ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS cell_pct
+            ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE s."AttendanceStatus"  NOT IN (0,6)), 0), 2) AS sunday_pct,
+            ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE t."AttendanceStatus"  NOT IN (0,6)), 0), 2) AS tuesday_pct,
+            ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE cm."AttendanceStatus" NOT IN (0,6)), 0), 2) AS cell_pct
           FROM "CellAttendance" ca
           JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
           JOIN "Tuesday"     t  ON ca."TuesdayServiceId" = t."Id"
@@ -1002,9 +1002,9 @@ router.get('/analytics/admin/overview', async (req, res) => {
             COUNT(*) FILTER (WHERE s."AttendanceStatus" = 1)             ::int  AS sunday_present,
             COUNT(*) FILTER (WHERE t."AttendanceStatus" = 1)             ::int  AS tuesday_present,
             COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)            ::int  AS cell_present,
-            ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS sunday_pct,
-            ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS tuesday_pct,
-            ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*), 0), 2) AS cell_pct
+            ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE s."AttendanceStatus"  NOT IN (0,6)), 0), 2) AS sunday_pct,
+            ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE t."AttendanceStatus"  NOT IN (0,6)), 0), 2) AS tuesday_pct,
+            ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE cm."AttendanceStatus" NOT IN (0,6)), 0), 2) AS cell_pct
           FROM "DepartmentAttendances" da
           JOIN "Sunday"      s  ON da."SundayServiceId"  = s."Id"
           JOIN "Tuesday"     t  ON da."TuesdayServiceId" = t."Id"
@@ -1029,9 +1029,9 @@ router.get('/analytics/admin/overview', async (req, res) => {
           COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)    ::int    AS sunday_present,
           COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)    ::int    AS tuesday_present,
           COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)    ::int    AS cell_present,
-          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 1) AS sunday_pct,
-          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 1) AS tuesday_pct,
-          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*), 0), 1) AS cell_pct
+          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE s."AttendanceStatus"  NOT IN (0,6)), 0), 1) AS sunday_pct,
+          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE t."AttendanceStatus"  NOT IN (0,6)), 0), 1) AS tuesday_pct,
+          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE cm."AttendanceStatus" NOT IN (0,6)), 0), 1) AS cell_pct
         FROM "CellAttendance" ca
         JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
         JOIN "Tuesday"     t  ON ca."TuesdayServiceId" = t."Id"
@@ -1050,9 +1050,9 @@ router.get('/analytics/admin/overview', async (req, res) => {
           COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)    ::int    AS sunday_present,
           COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)    ::int    AS tuesday_present,
           COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)    ::int    AS cell_present,
-          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 1) AS sunday_pct,
-          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*), 0), 1) AS tuesday_pct,
-          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*), 0), 1) AS cell_pct
+          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE s."AttendanceStatus"  NOT IN (0,6)), 0), 1) AS sunday_pct,
+          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE t."AttendanceStatus"  NOT IN (0,6)), 0), 1) AS tuesday_pct,
+          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE cm."AttendanceStatus" NOT IN (0,6)), 0), 1) AS cell_pct
         FROM "DepartmentAttendances" da
         JOIN "Sunday"      s  ON da."SundayServiceId"  = s."Id"
         JOIN "Tuesday"     t  ON da."TuesdayServiceId" = t."Id"
@@ -1075,19 +1075,22 @@ router.get('/analytics/admin/overview', async (req, res) => {
           COALESCE(att.sunday_present, 0)                                                    AS sunday_present,
           COALESCE(att.tuesday_present, 0)                                                   AS tuesday_present,
           COALESCE(att.cell_present, 0)                                                      AS cell_present,
-          CASE WHEN COALESCE(att.total, 0) = 0 THEN 0
-               ELSE ROUND(att.sunday_present  * 100.0 / att.total, 1) END                   AS sunday_pct,
-          CASE WHEN COALESCE(att.total, 0) = 0 THEN 0
-               ELSE ROUND(att.tuesday_present * 100.0 / att.total, 1) END                   AS tuesday_pct,
-          CASE WHEN COALESCE(att.total, 0) = 0 THEN 0
-               ELSE ROUND(att.cell_present    * 100.0 / att.total, 1) END                   AS cell_pct
+          CASE WHEN COALESCE(att.sunday_marked, 0) = 0 THEN 0
+               ELSE ROUND(att.sunday_present  * 100.0 / att.sunday_marked,  1) END          AS sunday_pct,
+          CASE WHEN COALESCE(att.tuesday_marked, 0) = 0 THEN 0
+               ELSE ROUND(att.tuesday_present * 100.0 / att.tuesday_marked, 1) END          AS tuesday_pct,
+          CASE WHEN COALESCE(att.cell_marked, 0) = 0 THEN 0
+               ELSE ROUND(att.cell_present    * 100.0 / att.cell_marked,    1) END          AS cell_pct
         FROM "Zones" z
         LEFT JOIN LATERAL (
           SELECT
-            COUNT(*)                                                 ::int AS total,
-            COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)       ::int AS sunday_present,
-            COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)       ::int AS tuesday_present,
-            COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)       ::int AS cell_present
+            COUNT(*)                                                                ::int AS total,
+            COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)                      ::int AS sunday_present,
+            COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)                      ::int AS tuesday_present,
+            COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)                      ::int AS cell_present,
+            COUNT(*) FILTER (WHERE s."AttendanceStatus"  NOT IN (0,6))             ::int AS sunday_marked,
+            COUNT(*) FILTER (WHERE t."AttendanceStatus"  NOT IN (0,6))             ::int AS tuesday_marked,
+            COUNT(*) FILTER (WHERE cm."AttendanceStatus" NOT IN (0,6))             ::int AS cell_marked
           FROM "CellAttendance" ca
           JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id" AND s."SundayService" >= $1
           JOIN "Tuesday"     t  ON ca."TuesdayServiceId" = t."Id"
@@ -1107,20 +1110,23 @@ router.get('/analytics/admin/overview', async (req, res) => {
           COALESCE(att.sunday_present, 0)                                                    AS sunday_present,
           COALESCE(att.tuesday_present, 0)                                                   AS tuesday_present,
           COALESCE(att.cell_present, 0)                                                      AS cell_present,
-          CASE WHEN COALESCE(att.total, 0) = 0 THEN 0
-               ELSE ROUND(att.sunday_present  * 100.0 / att.total, 1) END                   AS sunday_pct,
-          CASE WHEN COALESCE(att.total, 0) = 0 THEN 0
-               ELSE ROUND(att.tuesday_present * 100.0 / att.total, 1) END                   AS tuesday_pct,
-          CASE WHEN COALESCE(att.total, 0) = 0 THEN 0
-               ELSE ROUND(att.cell_present    * 100.0 / att.total, 1) END                   AS cell_pct
+          CASE WHEN COALESCE(att.sunday_marked, 0) = 0 THEN 0
+               ELSE ROUND(att.sunday_present  * 100.0 / att.sunday_marked,  1) END          AS sunday_pct,
+          CASE WHEN COALESCE(att.tuesday_marked, 0) = 0 THEN 0
+               ELSE ROUND(att.tuesday_present * 100.0 / att.tuesday_marked, 1) END          AS tuesday_pct,
+          CASE WHEN COALESCE(att.cell_marked, 0) = 0 THEN 0
+               ELSE ROUND(att.cell_present    * 100.0 / att.cell_marked,    1) END          AS cell_pct
         FROM "Departments" d
         JOIN "AspNetUsers" lu ON lu."Id" = d."DepartmentLeaderId"
         LEFT JOIN LATERAL (
           SELECT
-            COUNT(*)                                                 ::int AS total,
-            COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)       ::int AS sunday_present,
-            COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)       ::int AS tuesday_present,
-            COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)       ::int AS cell_present
+            COUNT(*)                                                                ::int AS total,
+            COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)                      ::int AS sunday_present,
+            COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)                      ::int AS tuesday_present,
+            COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)                      ::int AS cell_present,
+            COUNT(*) FILTER (WHERE s."AttendanceStatus"  NOT IN (0,6))             ::int AS sunday_marked,
+            COUNT(*) FILTER (WHERE t."AttendanceStatus"  NOT IN (0,6))             ::int AS tuesday_marked,
+            COUNT(*) FILTER (WHERE cm."AttendanceStatus" NOT IN (0,6))             ::int AS cell_marked
           FROM "DepartmentAttendances" da
           JOIN "Sunday"      s  ON da."SundayServiceId"  = s."Id" AND s."SundayService" >= $1
           JOIN "Tuesday"     t  ON da."TuesdayServiceId" = t."Id"
