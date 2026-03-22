@@ -8,6 +8,7 @@
     "dev:api": "node server/index.js",
     "dev:client": "vite",
     "build": "vite build",
+    "start": "NODE_ENV=production node server/index.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "prepare": "node -e \"try{require('husky').install()}catch(e){}\"",
