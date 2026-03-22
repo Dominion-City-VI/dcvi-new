@@ -31,15 +31,16 @@ import { observer } from 'mobx-react-lite';
 interface DataTableProps {
   cellAttendance: Array<TCellAttendanceItem>;
   placeholder: string;
+  isRestricted?: boolean;
 }
 
-const AttendanceTable = ({ cellAttendance, placeholder }: DataTableProps) => {
+const AttendanceTable = ({ cellAttendance, placeholder, isRestricted = false }: DataTableProps) => {
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
 
-  const columns = createFullAttendanceColumns(cellAttendance);
+  const columns = createFullAttendanceColumns(cellAttendance, isRestricted);
 
   const table = useReactTable({
     data: cellAttendance,

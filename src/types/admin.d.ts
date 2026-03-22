@@ -210,6 +210,87 @@ type TAttTrendPoint = {
   cellPct: number;
 };
 
+// ── Attendance restrictions ───────────────────────────────────────────────
+type TRestrictionItem = {
+  id: number;
+  entity_type: 'cell' | 'dept';
+  entity_id: string;
+  entity_name: string;
+  reason: string;
+  restricted_by: string;
+  created_at: string;
+};
+
+type TRestrictionCheck = {
+  restricted: boolean;
+  data: TRestrictionItem | null;
+};
+
+// ── Email composer ────────────────────────────────────────────────────────
+type TEmailZone = {
+  id: string;
+  name: string;
+  leader_name: string;
+  leader_email: string;
+};
+
+type TEmailCell = {
+  id: string;
+  name: string;
+  zone_name: string;
+  leader_name: string;
+  leader_email: string;
+};
+
+type TEmailDept = {
+  id: string;
+  name: string;
+  leader_name: string;
+  leader_email: string;
+};
+
+type TEmailUser = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+type TEmailRecipients = {
+  zones: TEmailZone[];
+  cells: TEmailCell[];
+  depts: TEmailDept[];
+  users: TEmailUser[];
+};
+
+type TEmailRecipientGroup = {
+  type: 'zoneLeaders' | 'cellLeaders' | 'deptLeaders' | 'zone' | 'cell' | 'dept' | 'user';
+  id?: string;
+  zoneId?: string;
+};
+
+type TSelectedRecipient = {
+  key: string;
+  label: string;
+  sublabel?: string;
+  group: TEmailRecipientGroup;
+};
+
+type TEmailAttachment = {
+  filename: string;
+  content: string; // base64
+};
+
+type TEmailLog = {
+  id: number;
+  subject: string;
+  recipient_count: number;
+  sent_by: string;
+  status: string;
+  error_msg: string | null;
+  created_at: string;
+};
+
+// ── Zone performance ──────────────────────────────────────────────────────
 type TZonePerfItem = {
   zone: string;
   zoneId: string;

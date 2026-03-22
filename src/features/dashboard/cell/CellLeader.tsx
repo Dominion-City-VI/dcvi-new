@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, CalendarCheck, CalendarDays, Activity } from 'lucide-react';
+import { Users, CalendarCheck, CalendarDays, Activity, Lock } from 'lucide-react';
 import { PeriodNameMap, periodText } from '@/constants/mangle';
 import { useFetchCellAnalytics } from '@/hooks/cell/useFetchCellAnalytics';
 import { useStore } from '@/store';
@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Overview from '../components/Overview';
 import { StatCard } from '../components/StatCard';
 import { AttendanceServiceCard } from '../components/AttendanceServiceCard';
+import { useCheckRestriction } from '@/hooks/admin/useRestrictions';
 
 function CellLeaderDB() {
   const {
@@ -24,6 +25,9 @@ function CellLeaderDB() {
 
   const periodNum = PeriodNameMap.get(query) as number;
   const cellId = userExtraInfo.cellId;
+
+  const { data: restrictionData } = useCheckRestriction('cell', cellId);
+  const isRestricted = restrictionData?.restricted ?? false;
 
   const { data, isLoading } = useFetchCellAnalytics(
     { period: periodNum },
@@ -74,6 +78,19 @@ function CellLeaderDB() {
 
   return (
     <>
+      {isRestricted && (
+        <div className="mb-4 flex items-start gap-3 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-800 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800">
+          <Lock size={18} className="mt-0.5 shrink-0" />
+          <div>
+            <p className="font-semibold text-sm">Attendance filing restricted</p>
+            <p className="text-xs mt-0.5">
+              An admin has restricted your cell from submitting attendance records.
+              {restrictionData?.data?.reason && ` Reason: "${restrictionData.data.reason}"`}
+              {' '}Please contact your zone leader or admin for more information.
+            </p>
+          </div>
+        </div>
+      )}
       <div className="mb-2 flex items-center justify-between space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">Cell Dashboard</h1>
         <div className="flex flex-col gap-4 sm:my-4 sm:flex-row">

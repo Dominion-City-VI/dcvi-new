@@ -9,7 +9,9 @@ import {
   Users,
   Wallet2,
   ShieldCheck,
-  BarChart3
+  BarChart3,
+  ShieldOff,
+  Mail
 } from 'lucide-react';
 
 export const sidebarData: SidebarData = {
@@ -158,6 +160,18 @@ export const sidebarData: SidebarData = {
           title: 'Analytics',
           icon: BarChart3,
           url: '/admin/analytics',
+          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
+        },
+        {
+          title: 'Restrictions',
+          icon: ShieldOff,
+          url: '/admin/restrictions',
+          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
+        },
+        {
+          title: 'Email',
+          icon: Mail,
+          url: '/admin/email',
           rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
         }
       ]

@@ -52,7 +52,8 @@ const staticColumns: ColumnDef<TCellAttendanceItem>[] = [
 ];
 
 const createAttendanceColumnsOnly = (
-  data: TCellAttendanceItem[]
+  data: TCellAttendanceItem[],
+  isRestricted = false
 ): ColumnDef<TCellAttendanceItem>[] => {
   if (!data.length) return [];
 
@@ -176,13 +177,9 @@ const createAttendanceColumnsOnly = (
           //return weekData?.record.sundayAttendanceStatus ?? 6;
         },
         {
-          // id: 'actions',
-          // header: '',
-          // cell: DataTableRowActions,
-          // size: 150
           id: `actions-${index}`,
           header: '',
-          cell: ({ row }) => <DataTableRowActions row={row} weekDateRange={week.dateRange} />,
+          cell: ({ row }) => <DataTableRowActions row={row} weekDateRange={week.dateRange} isRestricted={isRestricted} />,
           size: 150
         }
       )
@@ -191,7 +188,8 @@ const createAttendanceColumnsOnly = (
 };
 
 export const createFullAttendanceColumns = (
-  data: TCellAttendanceItem[]
+  data: TCellAttendanceItem[],
+  isRestricted = false
 ): ColumnDef<TCellAttendanceItem>[] => {
-  return [...staticColumns, ...createAttendanceColumnsOnly(data)];
+  return [...staticColumns, ...createAttendanceColumnsOnly(data, isRestricted)];
 };

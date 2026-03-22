@@ -6,6 +6,10 @@ const LOCAL_ZONES_OVERVIEW       = '/analytics/admin/zones-overview';
 const LOCAL_DEPT_OVERVIEW        = '/analytics/admin/dept-overview';
 const LOCAL_LEADERS              = '/analytics/admin/leaders';
 const LOCAL_ADMIN_OVERVIEW       = '/analytics/admin/overview';
+const LOCAL_RESTRICTIONS         = '/restrictions';
+const LOCAL_RESTRICTION_CHECK    = '/restrictions/check';
+const LOCAL_EMAIL_RECIPIENTS     = '/email/recipients';
+const LOCAL_EMAIL_LOGS           = '/email/logs';
 
 export const admin = {
   getAnalytics(query: TCellAnalyticsQuery) {
@@ -82,6 +86,38 @@ export const admin = {
       path: LOCAL_ADMIN_OVERVIEW,
       keys: () => [LOCAL_ADMIN_OVERVIEW, period] as const,
       params: { period },
+      requestServer: 'localServer' as const
+    };
+  },
+
+  getRestrictions() {
+    return {
+      path: LOCAL_RESTRICTIONS,
+      keys: () => [LOCAL_RESTRICTIONS] as const,
+      requestServer: 'localServer' as const
+    };
+  },
+
+  checkRestriction(entityType: string, entityId: string) {
+    return {
+      path: `${LOCAL_RESTRICTION_CHECK}/${entityType}/${entityId}`,
+      keys: () => [LOCAL_RESTRICTION_CHECK, entityType, entityId] as const,
+      requestServer: 'localServer' as const
+    };
+  },
+
+  getEmailRecipients() {
+    return {
+      path: LOCAL_EMAIL_RECIPIENTS,
+      keys: () => [LOCAL_EMAIL_RECIPIENTS] as const,
+      requestServer: 'localServer' as const
+    };
+  },
+
+  getEmailLogs() {
+    return {
+      path: LOCAL_EMAIL_LOGS,
+      keys: () => [LOCAL_EMAIL_LOGS] as const,
       requestServer: 'localServer' as const
     };
   }

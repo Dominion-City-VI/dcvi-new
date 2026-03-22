@@ -14,9 +14,10 @@ import { EnumAttendanceStatus } from '@/constants/mangle';
 interface DataTableRowActionsProps {
   row: Row<TCellAttendanceItem>;
   weekDateRange: string;
+  isRestricted?: boolean;
 }
 
-export function DataTableRowActions({ row, weekDateRange }: DataTableRowActionsProps) {
+export function DataTableRowActions({ row, weekDateRange, isRestricted }: DataTableRowActionsProps) {
   const {
     AppConfigStore: { toggleModals }
   } = useStore();
@@ -28,6 +29,7 @@ export function DataTableRowActions({ row, weekDateRange }: DataTableRowActionsP
   const weekData = cellAttenanceResponseVMs.find((w) => w.dateRange === weekDateRange);
 
   if (!weekData) return null; // nothing to manage
+  if (isRestricted) return null; // filing disabled by admin
 
   const { tuesdayDate, cellDate, sundayDate, record } = weekData;
   const { cellAttendanceStatus, sundayAttendanceStatus, tuesdayAttendanceStatus } = record;

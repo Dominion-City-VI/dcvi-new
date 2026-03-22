@@ -34,7 +34,9 @@ import { Route as AuthenticatedDepartmentDepartmentMembersIndexImport } from './
 import { Route as AuthenticatedCellMembersIndexImport } from './routes/_authenticated/cell/members/index'
 import { Route as AuthenticatedCellAttendanceIndexImport } from './routes/_authenticated/cell/attendance/index'
 import { Route as AuthenticatedAdminZonesIndexImport } from './routes/_authenticated/admin/zones/index'
+import { Route as AuthenticatedAdminRestrictionsIndexImport } from './routes/_authenticated/admin/restrictions/index'
 import { Route as AuthenticatedAdminLeadersIndexImport } from './routes/_authenticated/admin/leaders/index'
+import { Route as AuthenticatedAdminEmailIndexImport } from './routes/_authenticated/admin/email/index'
 import { Route as AuthenticatedAdminDepartmentsIndexImport } from './routes/_authenticated/admin/departments/index'
 import { Route as AuthenticatedAdminAnalyticsIndexImport } from './routes/_authenticated/admin/analytics/index'
 import { Route as AuthenticatedZoneCellsCellIdImport } from './routes/_authenticated/zone/cells/$cellId'
@@ -202,10 +204,24 @@ const AuthenticatedAdminZonesIndexRoute =
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
+const AuthenticatedAdminRestrictionsIndexRoute =
+  AuthenticatedAdminRestrictionsIndexImport.update({
+    id: '/admin/restrictions/',
+    path: '/admin/restrictions/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+
 const AuthenticatedAdminLeadersIndexRoute =
   AuthenticatedAdminLeadersIndexImport.update({
     id: '/admin/leaders/',
     path: '/admin/leaders/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+
+const AuthenticatedAdminEmailIndexRoute =
+  AuthenticatedAdminEmailIndexImport.update({
+    id: '/admin/email/',
+    path: '/admin/email/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
@@ -458,11 +474,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminDepartmentsIndexImport
       parentRoute: typeof AuthenticatedRouteImport
     }
+    '/_authenticated/admin/email/': {
+      id: '/_authenticated/admin/email/'
+      path: '/admin/email'
+      fullPath: '/admin/email'
+      preLoaderRoute: typeof AuthenticatedAdminEmailIndexImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
     '/_authenticated/admin/leaders/': {
       id: '/_authenticated/admin/leaders/'
       path: '/admin/leaders'
       fullPath: '/admin/leaders'
       preLoaderRoute: typeof AuthenticatedAdminLeadersIndexImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
+    '/_authenticated/admin/restrictions/': {
+      id: '/_authenticated/admin/restrictions/'
+      path: '/admin/restrictions'
+      fullPath: '/admin/restrictions'
+      preLoaderRoute: typeof AuthenticatedAdminRestrictionsIndexImport
       parentRoute: typeof AuthenticatedRouteImport
     }
     '/_authenticated/admin/zones/': {
@@ -585,7 +615,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedZoneCellsCellIdRoute: typeof AuthenticatedZoneCellsCellIdRoute
   AuthenticatedAdminAnalyticsIndexRoute: typeof AuthenticatedAdminAnalyticsIndexRoute
   AuthenticatedAdminDepartmentsIndexRoute: typeof AuthenticatedAdminDepartmentsIndexRoute
+  AuthenticatedAdminEmailIndexRoute: typeof AuthenticatedAdminEmailIndexRoute
   AuthenticatedAdminLeadersIndexRoute: typeof AuthenticatedAdminLeadersIndexRoute
+  AuthenticatedAdminRestrictionsIndexRoute: typeof AuthenticatedAdminRestrictionsIndexRoute
   AuthenticatedAdminZonesIndexRoute: typeof AuthenticatedAdminZonesIndexRoute
   AuthenticatedCellAttendanceIndexRoute: typeof AuthenticatedCellAttendanceIndexRoute
   AuthenticatedCellMembersIndexRoute: typeof AuthenticatedCellMembersIndexRoute
@@ -620,7 +652,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminAnalyticsIndexRoute: AuthenticatedAdminAnalyticsIndexRoute,
   AuthenticatedAdminDepartmentsIndexRoute:
     AuthenticatedAdminDepartmentsIndexRoute,
+  AuthenticatedAdminEmailIndexRoute: AuthenticatedAdminEmailIndexRoute,
   AuthenticatedAdminLeadersIndexRoute: AuthenticatedAdminLeadersIndexRoute,
+  AuthenticatedAdminRestrictionsIndexRoute:
+    AuthenticatedAdminRestrictionsIndexRoute,
   AuthenticatedAdminZonesIndexRoute: AuthenticatedAdminZonesIndexRoute,
   AuthenticatedCellAttendanceIndexRoute: AuthenticatedCellAttendanceIndexRoute,
   AuthenticatedCellMembersIndexRoute: AuthenticatedCellMembersIndexRoute,
@@ -689,7 +724,9 @@ export interface FileRoutesByFullPath {
   '/zone/cells/$cellId': typeof AuthenticatedZoneCellsCellIdRoute
   '/admin/analytics': typeof AuthenticatedAdminAnalyticsIndexRoute
   '/admin/departments': typeof AuthenticatedAdminDepartmentsIndexRoute
+  '/admin/email': typeof AuthenticatedAdminEmailIndexRoute
   '/admin/leaders': typeof AuthenticatedAdminLeadersIndexRoute
+  '/admin/restrictions': typeof AuthenticatedAdminRestrictionsIndexRoute
   '/admin/zones': typeof AuthenticatedAdminZonesIndexRoute
   '/cell/attendance': typeof AuthenticatedCellAttendanceIndexRoute
   '/cell/members': typeof AuthenticatedCellMembersIndexRoute
@@ -726,7 +763,9 @@ export interface FileRoutesByTo {
   '/zone/cells/$cellId': typeof AuthenticatedZoneCellsCellIdRoute
   '/admin/analytics': typeof AuthenticatedAdminAnalyticsIndexRoute
   '/admin/departments': typeof AuthenticatedAdminDepartmentsIndexRoute
+  '/admin/email': typeof AuthenticatedAdminEmailIndexRoute
   '/admin/leaders': typeof AuthenticatedAdminLeadersIndexRoute
+  '/admin/restrictions': typeof AuthenticatedAdminRestrictionsIndexRoute
   '/admin/zones': typeof AuthenticatedAdminZonesIndexRoute
   '/cell/attendance': typeof AuthenticatedCellAttendanceIndexRoute
   '/cell/members': typeof AuthenticatedCellMembersIndexRoute
@@ -766,7 +805,9 @@ export interface FileRoutesById {
   '/_authenticated/zone/cells/$cellId': typeof AuthenticatedZoneCellsCellIdRoute
   '/_authenticated/admin/analytics/': typeof AuthenticatedAdminAnalyticsIndexRoute
   '/_authenticated/admin/departments/': typeof AuthenticatedAdminDepartmentsIndexRoute
+  '/_authenticated/admin/email/': typeof AuthenticatedAdminEmailIndexRoute
   '/_authenticated/admin/leaders/': typeof AuthenticatedAdminLeadersIndexRoute
+  '/_authenticated/admin/restrictions/': typeof AuthenticatedAdminRestrictionsIndexRoute
   '/_authenticated/admin/zones/': typeof AuthenticatedAdminZonesIndexRoute
   '/_authenticated/cell/attendance/': typeof AuthenticatedCellAttendanceIndexRoute
   '/_authenticated/cell/members/': typeof AuthenticatedCellMembersIndexRoute
@@ -807,7 +848,9 @@ export interface FileRouteTypes {
     | '/zone/cells/$cellId'
     | '/admin/analytics'
     | '/admin/departments'
+    | '/admin/email'
     | '/admin/leaders'
+    | '/admin/restrictions'
     | '/admin/zones'
     | '/cell/attendance'
     | '/cell/members'
@@ -843,7 +886,9 @@ export interface FileRouteTypes {
     | '/zone/cells/$cellId'
     | '/admin/analytics'
     | '/admin/departments'
+    | '/admin/email'
     | '/admin/leaders'
+    | '/admin/restrictions'
     | '/admin/zones'
     | '/cell/attendance'
     | '/cell/members'
@@ -881,7 +926,9 @@ export interface FileRouteTypes {
     | '/_authenticated/zone/cells/$cellId'
     | '/_authenticated/admin/analytics/'
     | '/_authenticated/admin/departments/'
+    | '/_authenticated/admin/email/'
     | '/_authenticated/admin/leaders/'
+    | '/_authenticated/admin/restrictions/'
     | '/_authenticated/admin/zones/'
     | '/_authenticated/cell/attendance/'
     | '/_authenticated/cell/members/'
@@ -938,7 +985,9 @@ export const routeTree = rootRoute
         "/_authenticated/zone/cells/$cellId",
         "/_authenticated/admin/analytics/",
         "/_authenticated/admin/departments/",
+        "/_authenticated/admin/email/",
         "/_authenticated/admin/leaders/",
+        "/_authenticated/admin/restrictions/",
         "/_authenticated/admin/zones/",
         "/_authenticated/cell/attendance/",
         "/_authenticated/cell/members/",
@@ -1051,8 +1100,16 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/admin/departments/index.ts",
       "parent": "/_authenticated"
     },
+    "/_authenticated/admin/email/": {
+      "filePath": "_authenticated/admin/email/index.tsx",
+      "parent": "/_authenticated"
+    },
     "/_authenticated/admin/leaders/": {
       "filePath": "_authenticated/admin/leaders/index.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/admin/restrictions/": {
+      "filePath": "_authenticated/admin/restrictions/index.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/admin/zones/": {

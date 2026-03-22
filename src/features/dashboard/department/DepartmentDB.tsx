@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, CalendarCheck, CalendarDays } from 'lucide-react';
+import { Users, CalendarCheck, CalendarDays, Lock } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -13,6 +13,7 @@ import { useStore } from '@/store';
 import { useFetchDeptAnalytics } from '@/hooks/department/useFetchDeptAnalytics';
 import { StatCard } from '../components/StatCard';
 import { AttendanceServiceCard } from '../components/AttendanceServiceCard';
+import { useCheckRestriction } from '@/hooks/admin/useRestrictions';
 
 function DepartmentDB() {
   const {
@@ -21,8 +22,13 @@ function DepartmentDB() {
   const [query, setQuery] = useState('WEEK');
 
   const periodNum = PeriodNameMap.get(query) as number;
+  const departmentId = userExtraInfo.departmentId;
+
+  const { data: restrictionData } = useCheckRestriction('dept', departmentId);
+  const isRestricted = restrictionData?.restricted ?? false;
+
   const { serviceSummary, isLoading } = useFetchDeptAnalytics({
-    departmentId: userExtraInfo.departmentId,
+    departmentId,
     period: periodNum
   });
 
@@ -39,6 +45,19 @@ function DepartmentDB() {
 
   return (
     <>
+      {isRestricted && (
+        <div className="mb-4 flex items-start gap-3 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-800 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800">
+          <Lock size={18} className="mt-0.5 shrink-0" />
+          <div>
+            <p className="font-semibold text-sm">Attendance filing restricted</p>
+            <p className="text-xs mt-0.5">
+              An admin has restricted your department from submitting attendance records.
+              {restrictionData?.data?.reason && ` Reason: "${restrictionData.data.reason}"`}
+              {' '}Please contact your admin for more information.
+            </p>
+          </div>
+        </div>
+      )}
       <div className="mb-2 flex items-center justify-between space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">Department Dashboard</h1>
         <div className="flex flex-col gap-4 sm:my-4 sm:flex-row">
