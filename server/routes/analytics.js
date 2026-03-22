@@ -844,6 +844,7 @@ router.get('/analytics/admin/leaders', async (req, res) => {
       `);
 
       // Cell leaders (incl. assistants)
+      // Role is authoritative from RolesUnitAccessType: 5 = CellLeader, 6 = AssistantCellLeader
       const cellRes = await pool.query(`
         SELECT
           u."Id",
@@ -851,7 +852,7 @@ router.get('/analytics/admin/leaders', async (req, res) => {
           u."Email", u."PhoneNumber", u."UpdatedAt" AS last_login,
           c."Id" AS cell_id, c."Name" AS cell_name,
           z."Id" AS zone_id, z."Name" AS zone_name,
-          cl."IsAssistant",
+          (u."RolesUnitAccessType"::int = 6) AS "IsAssistant",
           COUNT(DISTINCT m."Id")::int AS member_count
         FROM "CellLeaders" cl
         JOIN "AspNetUsers" u ON u."Id" = cl."UserId"
@@ -859,8 +860,8 @@ router.get('/analytics/admin/leaders', async (req, res) => {
         JOIN "Zones" z       ON z."Id" = c."ZoneId"
         LEFT JOIN "Members" m ON m."CellId" = c."Id"
         GROUP BY u."Id", u."FirstName", u."LastName", u."Email", u."PhoneNumber", u."UpdatedAt",
-                 c."Id", c."Name", z."Id", z."Name", cl."IsAssistant"
-        ORDER BY cl."IsAssistant" ASC, u."UpdatedAt" DESC NULLS LAST
+                 u."RolesUnitAccessType", c."Id", c."Name", z."Id", z."Name"
+        ORDER BY (u."RolesUnitAccessType"::int = 6) ASC, u."UpdatedAt" DESC NULLS LAST
       `);
 
       // Dept leaders + assistants
