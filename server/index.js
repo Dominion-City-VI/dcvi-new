@@ -37,7 +37,7 @@ app.get('/api/local/health', (_req, res) => {
 if (isProd) {
   const distDir = path.join(__dirname, '../dist');
   app.use(express.static(distDir));
-  app.get('*', (_req, res) => {
+  app.get(/.*/, (_req, res) => {
     res.sendFile(path.join(distDir, 'index.html'));
   });
 }
