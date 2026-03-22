@@ -856,30 +856,47 @@ router.get('/analytics/admin/leaders', async (req, res) => {
         };
       }
 
-      // Cell perf per leader — COUNT FILTER per status (no additions)
+      // Cell perf per leader — denominator = member_count × week_count_in_period
+      // This penalises leaders who skip filings: unfiled weeks count as 0 present.
       const cellPerfRes = await pool.query(`
         SELECT
           cl."UserId"                                                                          AS user_id,
           COUNT(*)                                                                   ::int     AS total,
+          COALESCE(mc.member_count, 0)                                               ::int     AS member_count,
+          pd.wk                                                                      ::int     AS week_count,
+          (COALESCE(mc.member_count, 0) * pd.wk)                                    ::int     AS expected,
           COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)                         ::int     AS sunday_present,
           COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)                         ::int     AS tuesday_present,
           COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)                         ::int     AS cell_present,
-          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE s."AttendanceStatus"  NOT IN (0,6)), 0), 2) AS sunday_pct,
-          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE t."AttendanceStatus"  NOT IN (0,6)), 0), 2) AS tuesday_pct,
-          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE cm."AttendanceStatus" NOT IN (0,6)), 0), 2) AS cell_pct
+          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COALESCE(mc.member_count, 0) * pd.wk, 0), 2) AS sunday_pct,
+          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COALESCE(mc.member_count, 0) * pd.wk, 0), 2) AS tuesday_pct,
+          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COALESCE(mc.member_count, 0) * pd.wk, 0), 2) AS cell_pct
         FROM "CellLeaders" cl
         JOIN "CellAttendance" ca ON ca."CellId" = cl."CellId"
         JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
         JOIN "Tuesday"     t  ON ca."TuesdayServiceId" = t."Id"
         JOIN "CellMeeting" cm ON ca."CellMeetingId"    = cm."Id"
+        LEFT JOIN (
+          SELECT "CellId", COUNT(*)::int AS member_count
+          FROM "Members"
+          GROUP BY "CellId"
+        ) mc ON mc."CellId" = cl."CellId"
+        CROSS JOIN (
+          SELECT COUNT(DISTINCT "SundayService")::int AS wk
+          FROM "Sunday"
+          WHERE "SundayService" >= $1
+        ) pd
         WHERE s."SundayService" >= $1
-        GROUP BY cl."UserId"
+        GROUP BY cl."UserId", mc.member_count, pd.wk
       `, [dateFrom]);
 
       const cellPerfMap = {};
       for (const r of cellPerfRes.rows) {
         cellPerfMap[r.user_id] = {
           total:          r.total,
+          expected:       r.expected,
+          memberCount:    r.member_count,
+          weekCount:      r.week_count,
           sundayPresent:  r.sunday_present,
           tuesdayPresent: r.tuesday_present,
           cellPresent:    r.cell_present,
@@ -889,32 +906,48 @@ router.get('/analytics/admin/leaders', async (req, res) => {
         };
       }
 
-      // Zone perf per leader — COUNT FILTER per status (no additions)
+      // Zone perf per leader — denominator = zone_member_count × week_count_in_period
       // contributingCells = number of distinct cells that filed attendance records in period
       const zonePerfRes = await pool.query(`
         SELECT
           zl."UserId"                                                                          AS user_id,
           COUNT(*)                                                                   ::int     AS total,
+          COALESCE(mc.member_count, 0)                                               ::int     AS member_count,
+          pd.wk                                                                      ::int     AS week_count,
+          (COALESCE(mc.member_count, 0) * pd.wk)                                    ::int     AS expected,
           COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)                         ::int     AS sunday_present,
           COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)                         ::int     AS tuesday_present,
           COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)                         ::int     AS cell_present,
           COUNT(DISTINCT ca."CellId")                                               ::int     AS contributing_cells,
-          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE s."AttendanceStatus"  NOT IN (0,6)), 0), 2) AS sunday_pct,
-          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE t."AttendanceStatus"  NOT IN (0,6)), 0), 2) AS tuesday_pct,
-          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE cm."AttendanceStatus" NOT IN (0,6)), 0), 2) AS cell_pct
+          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COALESCE(mc.member_count, 0) * pd.wk, 0), 2) AS sunday_pct,
+          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COALESCE(mc.member_count, 0) * pd.wk, 0), 2) AS tuesday_pct,
+          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COALESCE(mc.member_count, 0) * pd.wk, 0), 2) AS cell_pct
         FROM "ZonalLeaders" zl
         JOIN "CellAttendance" ca ON ca."ZoneId" = zl."ZoneId"
         JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
         JOIN "Tuesday"     t  ON ca."TuesdayServiceId" = t."Id"
         JOIN "CellMeeting" cm ON ca."CellMeetingId"    = cm."Id"
+        LEFT JOIN (
+          SELECT "ZoneId", COUNT(*)::int AS member_count
+          FROM "Members"
+          GROUP BY "ZoneId"
+        ) mc ON mc."ZoneId" = zl."ZoneId"
+        CROSS JOIN (
+          SELECT COUNT(DISTINCT "SundayService")::int AS wk
+          FROM "Sunday"
+          WHERE "SundayService" >= $1
+        ) pd
         WHERE s."SundayService" >= $1
-        GROUP BY zl."UserId"
+        GROUP BY zl."UserId", mc.member_count, pd.wk
       `, [dateFrom]);
 
       const zonePerfMap = {};
       for (const r of zonePerfRes.rows) {
         zonePerfMap[r.user_id] = {
           total:              r.total,
+          expected:           r.expected,
+          memberCount:        r.member_count,
+          weekCount:          r.week_count,
           sundayPresent:      r.sunday_present,
           tuesdayPresent:     r.tuesday_present,
           cellPresent:        r.cell_present,
@@ -937,13 +970,13 @@ router.get('/analytics/admin/leaders', async (req, res) => {
           id: u.Id, name: u.name, email: u.Email, phone: u.PhoneNumber, lastLogin: u.last_login,
           zone: u.zone_name, zoneId: u.zone_id,
           cellCount: u.cell_count, memberCount: u.member_count,
-          performance: zonePerfMap[u.Id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0, total: 0, sundayPresent: 0, tuesdayPresent: 0, cellPresent: 0, contributingCells: 0 }
+          performance: zonePerfMap[u.Id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0, total: 0, expected: 0, memberCount: 0, weekCount: 0, sundayPresent: 0, tuesdayPresent: 0, cellPresent: 0, contributingCells: 0 }
         })),
         cellLeaders: cellRes.rows.map(u => ({
           id: u.Id, name: u.name, email: u.Email, phone: u.PhoneNumber, lastLogin: u.last_login,
           cell: u.cell_name, cellId: u.cell_id, zone: u.zone_name, zoneId: u.zone_id,
           isAssistant: u.IsAssistant, memberCount: u.member_count,
-          performance: cellPerfMap[u.Id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0, total: 0, sundayPresent: 0, tuesdayPresent: 0, cellPresent: 0 }
+          performance: cellPerfMap[u.Id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0, total: 0, expected: 0, memberCount: 0, weekCount: 0, sundayPresent: 0, tuesdayPresent: 0, cellPresent: 0 }
         })),
         // deptLeaders: one entry per leader (no assistants in the flat list).
         // Each entry carries an `assistants` array for tree rendering in the UI.

@@ -32,7 +32,7 @@ const PERIODS = [
 
 function PerfBadge({ value, present, total }: { value: number; present?: number; total?: number }) {
   const title = present !== undefined && total !== undefined
-    ? `${present} present out of ${total} records`
+    ? `${present} present out of ${total} expected (members × weeks in period)`
     : undefined;
   return (
     <div className="flex flex-col items-center gap-0.5">
@@ -249,16 +249,16 @@ const LeadersOverview = () => {
                         <TableCell className="text-center">{l.cellCount}</TableCell>
                         <TableCell className="text-center">{l.memberCount}</TableCell>
                         <TableCell className="text-center">
-                          <PerfBadge value={l.performance.sundayPct}  present={l.performance.sundayPresent}  total={l.performance.total} />
+                          <PerfBadge value={l.performance.sundayPct}  present={l.performance.sundayPresent}  total={l.performance.expected} />
                           {partialData && (
                             <div className="text-[9px] text-amber-600 mt-0.5 whitespace-nowrap">{contrib}/{allCells} cells</div>
                           )}
                         </TableCell>
                         <TableCell className="text-center">
-                          <PerfBadge value={l.performance.tuesdayPct} present={l.performance.tuesdayPresent} total={l.performance.total} />
+                          <PerfBadge value={l.performance.tuesdayPct} present={l.performance.tuesdayPresent} total={l.performance.expected} />
                         </TableCell>
                         <TableCell className="text-center">
-                          <PerfBadge value={l.performance.cellPct}    present={l.performance.cellPresent}    total={l.performance.total} />
+                          <PerfBadge value={l.performance.cellPct}    present={l.performance.cellPresent}    total={l.performance.expected} />
                         </TableCell>
                         <TableCell><LastLogin ts={l.lastLogin} /></TableCell>
                       </TableRow>
@@ -315,9 +315,9 @@ const LeadersOverview = () => {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-center">{l.memberCount}</TableCell>
-                            <TableCell className="text-center"><PerfBadge value={l.performance.sundayPct}  present={l.performance.sundayPresent}  total={l.performance.total} /></TableCell>
-                            <TableCell className="text-center"><PerfBadge value={l.performance.tuesdayPct} present={l.performance.tuesdayPresent} total={l.performance.total} /></TableCell>
-                            <TableCell className="text-center"><PerfBadge value={l.performance.cellPct}    present={l.performance.cellPresent}    total={l.performance.total} /></TableCell>
+                            <TableCell className="text-center"><PerfBadge value={l.performance.sundayPct}  present={l.performance.sundayPresent}  total={l.performance.expected} /></TableCell>
+                            <TableCell className="text-center"><PerfBadge value={l.performance.tuesdayPct} present={l.performance.tuesdayPresent} total={l.performance.expected} /></TableCell>
+                            <TableCell className="text-center"><PerfBadge value={l.performance.cellPct}    present={l.performance.cellPresent}    total={l.performance.expected} /></TableCell>
                             <TableCell><LastLogin ts={l.lastLogin} /></TableCell>
                           </TableRow>
                         ))}
