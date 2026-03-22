@@ -103,9 +103,12 @@ const AdminAnalytics = () => {
   const { counts, cellKpi, deptKpi, cellTrend, deptTrend, zonePerformance, deptPerformance } = data;
 
   const top5Zones    = zonePerformance.filter(z => z.sundayPct > 0).slice(0, 5);
-  const bottom5Zones = [...zonePerformance].reverse().slice(0, 5);
+  const top5ZoneIds  = new Set(top5Zones.map(z => z.zoneId));
+  const bottom5Zones = [...zonePerformance].reverse().filter(z => !top5ZoneIds.has(z.zoneId)).slice(0, 5);
+
   const top5Depts    = deptPerformance.filter(d => d.sundayPct > 0).slice(0, 5);
-  const bottom5Depts = [...deptPerformance].reverse().slice(0, 5);
+  const top5DeptIds  = new Set(top5Depts.map(d => d.deptId));
+  const bottom5Depts = [...deptPerformance].reverse().filter(d => !top5DeptIds.has(d.deptId)).slice(0, 5);
 
   const radarData = [
     { metric: 'Sun (Cell)',  value: cellKpi.sundayPct  },

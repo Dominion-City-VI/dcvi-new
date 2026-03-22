@@ -1260,7 +1260,8 @@ router.get('/analytics/admin/overview', async (req, res) => {
           CASE WHEN (COALESCE(att.max_weekly, 0) * pw.wk) = 0 THEN 0
                ELSE ROUND(COALESCE(att.cell_present,    0) * 100.0 / (COALESCE(att.max_weekly, 0) * pw.wk), 1) END AS cell_pct
         FROM "Departments" d
-        JOIN "AspNetUsers" lu ON lu."Id" = d."DepartmentLeaderId"
+        -- LEFT JOIN so departments with no leader assigned are still included
+        LEFT JOIN "AspNetUsers" lu ON lu."Id" = d."DepartmentLeaderId"
         CROSS JOIN period_weeks pw
         LEFT JOIN LATERAL (
           SELECT
@@ -1284,7 +1285,7 @@ router.get('/analytics/admin/overview', async (req, res) => {
           JOIN "Tuesday"     t  ON da."TuesdayServiceId" = t."Id"
           JOIN "CellMeeting" cm ON da."CellMeetingId"    = cm."Id"
           WHERE da."DepartmentalLeaderId" = lu."Id"
-        ) att ON true
+        ) att ON lu."Id" IS NOT NULL
         ORDER BY sunday_pct DESC NULLS LAST
       `, [dateFrom]);
 
