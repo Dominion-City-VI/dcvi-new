@@ -366,9 +366,9 @@ const LeadersOverview = () => {
                           </TableCell>
                           <TableCell className="text-xs">{l.email}</TableCell>
                           <TableCell className="text-xs">{l.phone}</TableCell>
-                          <TableCell className="text-center"><PerfBadge value={l.performance.sundayPct}  present={l.performance.sundayPresent}  total={l.performance.total} /></TableCell>
-                          <TableCell className="text-center"><PerfBadge value={l.performance.tuesdayPct} present={l.performance.tuesdayPresent} total={l.performance.total} /></TableCell>
-                          <TableCell className="text-center"><PerfBadge value={l.performance.cellPct}    present={l.performance.cellPresent}    total={l.performance.total} /></TableCell>
+                          <TableCell className="text-center"><PerfBadge value={l.performance.sundayPct}  present={l.performance.sundayPresent}  total={l.performance.expected ?? l.performance.total} /></TableCell>
+                          <TableCell className="text-center"><PerfBadge value={l.performance.tuesdayPct} present={l.performance.tuesdayPresent} total={l.performance.expected ?? l.performance.total} /></TableCell>
+                          <TableCell className="text-center"><PerfBadge value={l.performance.cellPct}    present={l.performance.cellPresent}    total={l.performance.expected ?? l.performance.total} /></TableCell>
                           <TableCell className="text-center text-xs">{l.performance.total ?? 0}</TableCell>
                           <TableCell><LastLogin ts={l.lastLogin} /></TableCell>
                         </TableRow>

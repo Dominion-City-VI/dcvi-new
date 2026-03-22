@@ -541,14 +541,21 @@ router.get('/analytics/admin/zones-overview', async (req, res) => {
         ORDER BY c."Name"
       `);
 
-      // Zone-level performance
+      // How many distinct Sundays exist in the period → denominator base
+      const wkRes = await pool.query(
+        `SELECT COUNT(DISTINCT "SundayService")::int AS wk FROM "Sunday" WHERE "SundayService" >= $1`,
+        [dateFrom]
+      );
+      const weekCount = wkRes.rows[0]?.wk ?? 1;
+
+      // Zone-level performance — present counts only; % computed in JS using member_count × weekCount
       const zonePerfRes = await pool.query(`
         SELECT
-          ca."ZoneId" AS zone_id,
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN s."AttendanceStatus"  NOT IN (0,6) THEN 1 END),0),2) AS sunday_pct,
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN t."AttendanceStatus"  NOT IN (0,6) THEN 1 END),0),2) AS tuesday_pct,
-          ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN cm."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS cell_pct,
-          COUNT(*)::int AS total_records
+          ca."ZoneId"                                                          AS zone_id,
+          COUNT(*)                                                    ::int    AS total_records,
+          COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)      ::int    AS sunday_present,
+          COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)      ::int    AS tuesday_present,
+          COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)      ::int    AS cell_present
         FROM "CellAttendance" ca
         JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
         JOIN "Tuesday"     t  ON ca."TuesdayServiceId" = t."Id"
@@ -557,14 +564,14 @@ router.get('/analytics/admin/zones-overview', async (req, res) => {
         GROUP BY ca."ZoneId"
       `, [dateFrom]);
 
-      // Cell-level performance
+      // Cell-level performance — same approach
       const cellPerfRes = await pool.query(`
         SELECT
-          ca."CellId" AS cell_id,
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN s."AttendanceStatus"  NOT IN (0,6) THEN 1 END),0),2) AS sunday_pct,
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN t."AttendanceStatus"  NOT IN (0,6) THEN 1 END),0),2) AS tuesday_pct,
-          ROUND(COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN cm."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS cell_pct,
-          COUNT(*)::int AS total_records
+          ca."CellId"                                                          AS cell_id,
+          COUNT(*)                                                    ::int    AS total_records,
+          COUNT(CASE WHEN s."AttendanceStatus"  = 1 THEN 1 END)      ::int    AS sunday_present,
+          COUNT(CASE WHEN t."AttendanceStatus"  = 1 THEN 1 END)      ::int    AS tuesday_present,
+          COUNT(CASE WHEN cm."AttendanceStatus" = 1 THEN 1 END)      ::int    AS cell_present
         FROM "CellAttendance" ca
         JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id"
         JOIN "Tuesday"     t  ON ca."TuesdayServiceId" = t."Id"
@@ -573,31 +580,39 @@ router.get('/analytics/admin/zones-overview', async (req, res) => {
         GROUP BY ca."CellId"
       `, [dateFrom]);
 
-      // Build lookup maps
-      const zonePerf = {};
+      // Helper: compute pct using expected = members × weekCount as denominator
+      const pctOf = (present, memberCount) => {
+        const expected = memberCount * weekCount;
+        return expected === 0 ? 0 : Math.round(present * 1000 / expected) / 10;
+      };
+
+      // Build lookup maps (present counts keyed by id)
+      const zonePerfRaw = {};
       for (const r of zonePerfRes.rows) {
-        zonePerf[r.zone_id] = {
-          sundayPct:    parseFloat(r.sunday_pct  ?? 0),
-          tuesdayPct:   parseFloat(r.tuesday_pct ?? 0),
-          cellPct:      parseFloat(r.cell_pct    ?? 0),
-          totalRecords: r.total_records
+        zonePerfRaw[r.zone_id] = {
+          totalRecords:    r.total_records,
+          sundayPresent:   r.sunday_present,
+          tuesdayPresent:  r.tuesday_present,
+          cellPresent:     r.cell_present
         };
       }
 
-      const cellPerf = {};
+      const cellPerfRaw = {};
       for (const r of cellPerfRes.rows) {
-        cellPerf[r.cell_id] = {
-          sundayPct:    parseFloat(r.sunday_pct  ?? 0),
-          tuesdayPct:   parseFloat(r.tuesday_pct ?? 0),
-          cellPct:      parseFloat(r.cell_pct    ?? 0),
-          totalRecords: r.total_records
+        cellPerfRaw[r.cell_id] = {
+          totalRecords:    r.total_records,
+          sundayPresent:   r.sunday_present,
+          tuesdayPresent:  r.tuesday_present,
+          cellPresent:     r.cell_present
         };
       }
 
-      // Group cells by zone
+      // Group cells by zone — % computed from member_count × weekCount
       const cellsByZone = {};
       for (const c of cellsRes.rows) {
         if (!cellsByZone[c.zone_id]) cellsByZone[c.zone_id] = [];
+        const cp  = cellPerfRaw[c.cell_id];
+        const exp = c.member_count * weekCount;
         cellsByZone[c.zone_id].push({
           cellId:      c.cell_id,
           name:        c.cell_name,
@@ -610,27 +625,56 @@ router.get('/analytics/admin/zones-overview', async (req, res) => {
             phone:     c.leader_phone,
             lastLogin: c.leader_last_login
           } : null,
-          performance: cellPerf[c.cell_id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0, totalRecords: 0 }
+          performance: cp
+            ? {
+                totalRecords:  cp.totalRecords,
+                expected:      exp,
+                weekCount,
+                sundayPresent: cp.sundayPresent,
+                tuesdayPresent: cp.tuesdayPresent,
+                cellPresent:   cp.cellPresent,
+                sundayPct:     pctOf(cp.sundayPresent,  c.member_count),
+                tuesdayPct:    pctOf(cp.tuesdayPresent, c.member_count),
+                cellPct:       pctOf(cp.cellPresent,    c.member_count)
+              }
+            : { totalRecords: 0, expected: exp, weekCount, sundayPresent: 0, tuesdayPresent: 0, cellPresent: 0, sundayPct: 0, tuesdayPct: 0, cellPct: 0 }
         });
       }
 
-      // Build final zones array
-      return zonesRes.rows.map(z => ({
-        zoneId:      z.zone_id,
-        name:        z.zone_name,
-        zoneStatus:  z.ZoneStatus,
-        cellCount:   z.cell_count,
-        memberCount: z.member_count,
-        leader: z.leader_id ? {
-          id:        z.leader_id,
-          name:      z.leader_name,
-          email:     z.leader_email,
-          phone:     z.leader_phone,
-          lastLogin: z.leader_last_login
-        } : null,
-        performance: zonePerf[z.zone_id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0, totalRecords: 0 },
-        cells: cellsByZone[z.zone_id] ?? []
-      }));
+      // Build final zones array — % computed from zone member_count × weekCount
+      return zonesRes.rows.map(z => {
+        const zp  = zonePerfRaw[z.zone_id];
+        const exp = z.member_count * weekCount;
+        return {
+          zoneId:      z.zone_id,
+          name:        z.zone_name,
+          zoneStatus:  z.ZoneStatus,
+          cellCount:   z.cell_count,
+          memberCount: z.member_count,
+          weekCount,
+          leader: z.leader_id ? {
+            id:        z.leader_id,
+            name:      z.leader_name,
+            email:     z.leader_email,
+            phone:     z.leader_phone,
+            lastLogin: z.leader_last_login
+          } : null,
+          performance: zp
+            ? {
+                totalRecords:   zp.totalRecords,
+                expected:       exp,
+                weekCount,
+                sundayPresent:  zp.sundayPresent,
+                tuesdayPresent: zp.tuesdayPresent,
+                cellPresent:    zp.cellPresent,
+                sundayPct:      pctOf(zp.sundayPresent,  z.member_count),
+                tuesdayPct:     pctOf(zp.tuesdayPresent, z.member_count),
+                cellPct:        pctOf(zp.cellPresent,    z.member_count)
+              }
+            : { totalRecords: 0, expected: exp, weekCount, sundayPresent: 0, tuesdayPresent: 0, cellPresent: 0, sundayPct: 0, tuesdayPct: 0, cellPct: 0 },
+          cells: cellsByZone[z.zone_id] ?? []
+        };
+      });
     });
 
     res.json(wrapResult(data));
@@ -668,14 +712,32 @@ router.get('/analytics/admin/dept-overview', async (req, res) => {
         ORDER BY d."Name"
       `);
 
-      // Dept performance via DepartmentalLeaderId → Departments.DepartmentLeaderId
+      // Distinct Sunday weeks in the period — denominator base for dept
+      const wkRes2 = await pool.query(
+        `SELECT COUNT(DISTINCT "SundayService")::int AS wk FROM "Sunday" WHERE "SundayService" >= $1`,
+        [dateFrom]
+      );
+      const weekCount2 = wkRes2.rows[0]?.wk ?? 1;
+
+      // Dept performance — denominator = max_weekly (largest filing in any single week) × weekCount
+      // max_weekly ≈ dept member count; penalises leaders who file less than every week.
       const deptPerfRes = await pool.query(`
         SELECT
-          da."DepartmentalLeaderId" AS leader_id,
-          COUNT(*)::int AS total_records,
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN s."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS sunday_pct,
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END)*100.0/NULLIF(COUNT(CASE WHEN t."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS tuesday_pct,
-          ROUND((COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)+COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END))*100.0/NULLIF(COUNT(CASE WHEN s."AttendanceStatus" NOT IN (0,6) THEN 1 END)+COUNT(CASE WHEN t."AttendanceStatus" NOT IN (0,6) THEN 1 END),0),2) AS overall_pct
+          da."DepartmentalLeaderId"                                                           AS leader_id,
+          COUNT(*)                                                                  ::int     AS total_records,
+          COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)                        ::int     AS sunday_present,
+          COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END)                        ::int     AS tuesday_present,
+          (
+            SELECT COALESCE(MAX(wkc), 0)::int
+            FROM (
+              SELECT COUNT(*)::int AS wkc
+              FROM "DepartmentAttendances" da2
+              JOIN "Sunday" s2 ON da2."SundayServiceId" = s2."Id"
+              WHERE da2."DepartmentalLeaderId" = da."DepartmentalLeaderId"
+                AND s2."SundayService" >= $1
+              GROUP BY da2."SundayServiceId"
+            ) weekly_counts
+          )                                                                          ::int     AS max_weekly
         FROM "DepartmentAttendances" da
         JOIN "Sunday"  s ON da."SundayServiceId"  = s."Id"
         JOIN "Tuesday" t ON da."TuesdayServiceId" = t."Id"
@@ -683,13 +745,24 @@ router.get('/analytics/admin/dept-overview', async (req, res) => {
         GROUP BY da."DepartmentalLeaderId"
       `, [dateFrom]);
 
+      const pctOfDept = (present, maxWeekly) => {
+        const expected = maxWeekly * weekCount2;
+        return expected === 0 ? 0 : Math.round(present * 1000 / expected) / 10;
+      };
+
       const perfByLeader = {};
       for (const r of deptPerfRes.rows) {
+        const expected = r.max_weekly * weekCount2;
         perfByLeader[r.leader_id] = {
-          totalRecords: r.total_records,
-          sundayPct:    parseFloat(r.sunday_pct  ?? 0),
-          tuesdayPct:   parseFloat(r.tuesday_pct ?? 0),
-          overallPct:   parseFloat(r.overall_pct ?? 0)
+          totalRecords:   r.total_records,
+          expected,
+          maxWeekly:      r.max_weekly,
+          weekCount:      weekCount2,
+          sundayPresent:  r.sunday_present,
+          tuesdayPresent: r.tuesday_present,
+          sundayPct:      pctOfDept(r.sunday_present,  r.max_weekly),
+          tuesdayPct:     pctOfDept(r.tuesday_present, r.max_weekly),
+          overallPct:     expected === 0 ? 0 : Math.round((r.sunday_present + r.tuesday_present) * 1000 / (2 * expected)) / 10
         };
       }
 
@@ -729,7 +802,7 @@ router.get('/analytics/admin/dept-overview', async (req, res) => {
           lastLogin: d.leader_last_login
         } : null,
         assistants: (deptAssistMap[d.dept_id] ?? []).map(id => assistMap[id]).filter(Boolean),
-        performance: perfByLeader[d.leader_id] ?? { totalRecords: 0, sundayPct: 0, tuesdayPct: 0, overallPct: 0 }
+        performance: perfByLeader[d.leader_id] ?? { totalRecords: 0, expected: 0, maxWeekly: 0, weekCount: weekCount2, sundayPresent: 0, tuesdayPresent: 0, sundayPct: 0, tuesdayPct: 0, overallPct: 0 }
       }));
     });
 
@@ -824,7 +897,14 @@ router.get('/analytics/admin/leaders', async (req, res) => {
         }));
       }
 
-      // Dept perf per leader — COUNT FILTER per status (no additions)
+      // Period week count for dept denominator
+      const deptWkRes = await pool.query(
+        `SELECT COUNT(DISTINCT "SundayService")::int AS wk FROM "Sunday" WHERE "SundayService" >= $1`,
+        [dateFrom]
+      );
+      const deptWeekCount = deptWkRes.rows[0]?.wk ?? 1;
+
+      // Dept perf per leader — denominator = max_weekly × weekCount (penalises non-filers)
       const deptPerfRes = await pool.query(`
         SELECT
           da."DepartmentalLeaderId"                                                           AS user_id,
@@ -832,9 +912,17 @@ router.get('/analytics/admin/leaders', async (req, res) => {
           COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)                        ::int     AS sunday_present,
           COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)                        ::int     AS tuesday_present,
           COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)                        ::int     AS cell_present,
-          ROUND(COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE s."AttendanceStatus"  NOT IN (0,6)), 0), 2) AS sunday_pct,
-          ROUND(COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE t."AttendanceStatus"  NOT IN (0,6)), 0), 2) AS tuesday_pct,
-          ROUND(COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1) * 100.0 / NULLIF(COUNT(*) FILTER (WHERE cm."AttendanceStatus" NOT IN (0,6)), 0), 2) AS cell_pct
+          (
+            SELECT COALESCE(MAX(wkc), 0)::int
+            FROM (
+              SELECT COUNT(*)::int AS wkc
+              FROM "DepartmentAttendances" da2
+              JOIN "Sunday" s2 ON da2."SundayServiceId" = s2."Id"
+              WHERE da2."DepartmentalLeaderId" = da."DepartmentalLeaderId"
+                AND s2."SundayService" >= $1
+              GROUP BY da2."SundayServiceId"
+            ) wk_inner
+          )                                                                         ::int     AS max_weekly
         FROM "DepartmentAttendances" da
         JOIN "Sunday"      s  ON da."SundayServiceId"  = s."Id"
         JOIN "Tuesday"     t  ON da."TuesdayServiceId" = t."Id"
@@ -845,14 +933,19 @@ router.get('/analytics/admin/leaders', async (req, res) => {
 
       const deptPerfMap = {};
       for (const r of deptPerfRes.rows) {
+        const expected = r.max_weekly * deptWeekCount;
+        const dPct = (present) => expected === 0 ? 0 : Math.round(present * 1000 / expected) / 10;
         deptPerfMap[r.user_id] = {
           total:          r.total,
+          expected,
+          maxWeekly:      r.max_weekly,
+          weekCount:      deptWeekCount,
           sundayPresent:  r.sunday_present,
           tuesdayPresent: r.tuesday_present,
           cellPresent:    r.cell_present,
-          sundayPct:      parseFloat(r.sunday_pct  ?? 0),
-          tuesdayPct:     parseFloat(r.tuesday_pct ?? 0),
-          cellPct:        parseFloat(r.cell_pct    ?? 0)
+          sundayPct:      dPct(r.sunday_present),
+          tuesdayPct:     dPct(r.tuesday_present),
+          cellPct:        dPct(r.cell_present)
         };
       }
 
@@ -985,7 +1078,7 @@ router.get('/analytics/admin/leaders', async (req, res) => {
           .map(d => ({
             id: d.leader_id, name: d.leader_name, email: d.Email, phone: d.PhoneNumber,
             lastLogin: d.UpdatedAt, department: d.dept_name, departmentId: d.dept_id,
-            performance: deptPerfMap[d.leader_id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0, total: 0, sundayPresent: 0, tuesdayPresent: 0, cellPresent: 0 },
+            performance: deptPerfMap[d.leader_id] ?? { sundayPct: 0, tuesdayPct: 0, cellPct: 0, total: 0, expected: 0, maxWeekly: 0, weekCount: deptWeekCount, sundayPresent: 0, tuesdayPresent: 0, cellPresent: 0 },
             assistants: assistantsByDept[d.dept_id] ?? []
           }))
       };
@@ -1095,35 +1188,43 @@ router.get('/analytics/admin/overview', async (req, res) => {
         ORDER BY sort_key ASC
       `, [dateFrom]);
 
-      // ── 4. Zone performance — LATERAL avoids Members × CellAttendance ─
-      // For each zone we independently count its CellAttendance records.
-      // Member and cell counts come from scalar subqueries (no cross-product).
+      // ── 4. Zone performance — denominator = zone_members × period_weeks ─
+      // Zones with fewer filings are penalised (unfiled weeks → 0 present).
       const zonePerfRes = await pool.query(`
+        WITH period_weeks AS (
+          SELECT COUNT(DISTINCT "SundayService")::int AS wk
+          FROM "Sunday" WHERE "SundayService" >= $1
+        ),
+        zone_members AS (
+          SELECT "ZoneId", COUNT(*)::int AS member_count
+          FROM "Members" GROUP BY "ZoneId"
+        )
         SELECT
           z."Name"                                                                            AS zone,
           z."Id"                                                                              AS zone_id,
-          (SELECT COUNT(*) FROM "Members" m WHERE m."ZoneId" = z."Id")::int                 AS members,
-          (SELECT COUNT(*) FROM "Cells"   c WHERE c."ZoneId" = z."Id")::int                 AS cells,
-          COALESCE(att.total, 0)                                                              AS total,
-          COALESCE(att.sunday_present, 0)                                                    AS sunday_present,
-          COALESCE(att.tuesday_present, 0)                                                   AS tuesday_present,
-          COALESCE(att.cell_present, 0)                                                      AS cell_present,
-          CASE WHEN COALESCE(att.sunday_marked, 0) = 0 THEN 0
-               ELSE ROUND(att.sunday_present  * 100.0 / att.sunday_marked,  1) END          AS sunday_pct,
-          CASE WHEN COALESCE(att.tuesday_marked, 0) = 0 THEN 0
-               ELSE ROUND(att.tuesday_present * 100.0 / att.tuesday_marked, 1) END          AS tuesday_pct,
-          CASE WHEN COALESCE(att.cell_marked, 0) = 0 THEN 0
-               ELSE ROUND(att.cell_present    * 100.0 / att.cell_marked,    1) END          AS cell_pct
+          COALESCE(zm.member_count, 0)                                                       AS members,
+          (SELECT COUNT(*) FROM "Cells" c WHERE c."ZoneId" = z."Id")::int                  AS cells,
+          COALESCE(att.total, 0)                                                             AS total,
+          COALESCE(att.sunday_present, 0)                                                   AS sunday_present,
+          COALESCE(att.tuesday_present, 0)                                                  AS tuesday_present,
+          COALESCE(att.cell_present, 0)                                                     AS cell_present,
+          pw.wk                                                                             AS week_count,
+          (COALESCE(zm.member_count, 0) * pw.wk)                                           AS expected,
+          CASE WHEN (COALESCE(zm.member_count, 0) * pw.wk) = 0 THEN 0
+               ELSE ROUND(COALESCE(att.sunday_present,  0) * 100.0 / (COALESCE(zm.member_count, 0) * pw.wk), 1) END AS sunday_pct,
+          CASE WHEN (COALESCE(zm.member_count, 0) * pw.wk) = 0 THEN 0
+               ELSE ROUND(COALESCE(att.tuesday_present, 0) * 100.0 / (COALESCE(zm.member_count, 0) * pw.wk), 1) END AS tuesday_pct,
+          CASE WHEN (COALESCE(zm.member_count, 0) * pw.wk) = 0 THEN 0
+               ELSE ROUND(COALESCE(att.cell_present,    0) * 100.0 / (COALESCE(zm.member_count, 0) * pw.wk), 1) END AS cell_pct
         FROM "Zones" z
+        CROSS JOIN period_weeks pw
+        LEFT JOIN zone_members zm ON zm."ZoneId" = z."Id"
         LEFT JOIN LATERAL (
           SELECT
-            COUNT(*)                                                                ::int AS total,
-            COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)                      ::int AS sunday_present,
-            COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)                      ::int AS tuesday_present,
-            COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)                      ::int AS cell_present,
-            COUNT(*) FILTER (WHERE s."AttendanceStatus"  NOT IN (0,6))             ::int AS sunday_marked,
-            COUNT(*) FILTER (WHERE t."AttendanceStatus"  NOT IN (0,6))             ::int AS tuesday_marked,
-            COUNT(*) FILTER (WHERE cm."AttendanceStatus" NOT IN (0,6))             ::int AS cell_marked
+            COUNT(*)                                                       ::int AS total,
+            COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)             ::int AS sunday_present,
+            COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)             ::int AS tuesday_present,
+            COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)             ::int AS cell_present
           FROM "CellAttendance" ca
           JOIN "Sunday"      s  ON ca."SundayServiceId"  = s."Id" AND s."SundayService" >= $1
           JOIN "Tuesday"     t  ON ca."TuesdayServiceId" = t."Id"
@@ -1133,33 +1234,50 @@ router.get('/analytics/admin/overview', async (req, res) => {
         ORDER BY sunday_pct DESC NULLS LAST
       `, [dateFrom]);
 
-      // ── 5. Dept performance — LATERAL subquery, no cross-product ──────
+      // ── 5. Dept performance — denominator = max_weekly × period_weeks ──
+      // max_weekly ≈ dept member count (largest single-week filing for this leader).
       const deptPerfRes = await pool.query(`
+        WITH period_weeks AS (
+          SELECT COUNT(DISTINCT "SundayService")::int AS wk
+          FROM "Sunday" WHERE "SundayService" >= $1
+        )
         SELECT
           d."Name"                                                                            AS dept,
           d."Id"                                                                              AS dept_id,
           d."IsActive",
-          COALESCE(att.total, 0)                                                              AS total,
-          COALESCE(att.sunday_present, 0)                                                    AS sunday_present,
-          COALESCE(att.tuesday_present, 0)                                                   AS tuesday_present,
-          COALESCE(att.cell_present, 0)                                                      AS cell_present,
-          CASE WHEN COALESCE(att.sunday_marked, 0) = 0 THEN 0
-               ELSE ROUND(att.sunday_present  * 100.0 / att.sunday_marked,  1) END          AS sunday_pct,
-          CASE WHEN COALESCE(att.tuesday_marked, 0) = 0 THEN 0
-               ELSE ROUND(att.tuesday_present * 100.0 / att.tuesday_marked, 1) END          AS tuesday_pct,
-          CASE WHEN COALESCE(att.cell_marked, 0) = 0 THEN 0
-               ELSE ROUND(att.cell_present    * 100.0 / att.cell_marked,    1) END          AS cell_pct
+          COALESCE(att.total, 0)                                                             AS total,
+          COALESCE(att.sunday_present, 0)                                                   AS sunday_present,
+          COALESCE(att.tuesday_present, 0)                                                  AS tuesday_present,
+          COALESCE(att.cell_present, 0)                                                     AS cell_present,
+          COALESCE(att.max_weekly, 0)                                                       AS max_weekly,
+          pw.wk                                                                             AS week_count,
+          (COALESCE(att.max_weekly, 0) * pw.wk)                                            AS expected,
+          CASE WHEN (COALESCE(att.max_weekly, 0) * pw.wk) = 0 THEN 0
+               ELSE ROUND(COALESCE(att.sunday_present,  0) * 100.0 / (COALESCE(att.max_weekly, 0) * pw.wk), 1) END AS sunday_pct,
+          CASE WHEN (COALESCE(att.max_weekly, 0) * pw.wk) = 0 THEN 0
+               ELSE ROUND(COALESCE(att.tuesday_present, 0) * 100.0 / (COALESCE(att.max_weekly, 0) * pw.wk), 1) END AS tuesday_pct,
+          CASE WHEN (COALESCE(att.max_weekly, 0) * pw.wk) = 0 THEN 0
+               ELSE ROUND(COALESCE(att.cell_present,    0) * 100.0 / (COALESCE(att.max_weekly, 0) * pw.wk), 1) END AS cell_pct
         FROM "Departments" d
         JOIN "AspNetUsers" lu ON lu."Id" = d."DepartmentLeaderId"
+        CROSS JOIN period_weeks pw
         LEFT JOIN LATERAL (
           SELECT
-            COUNT(*)                                                                ::int AS total,
-            COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)                      ::int AS sunday_present,
-            COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)                      ::int AS tuesday_present,
-            COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)                      ::int AS cell_present,
-            COUNT(*) FILTER (WHERE s."AttendanceStatus"  NOT IN (0,6))             ::int AS sunday_marked,
-            COUNT(*) FILTER (WHERE t."AttendanceStatus"  NOT IN (0,6))             ::int AS tuesday_marked,
-            COUNT(*) FILTER (WHERE cm."AttendanceStatus" NOT IN (0,6))             ::int AS cell_marked
+            COUNT(*)                                                       ::int AS total,
+            COUNT(*) FILTER (WHERE s."AttendanceStatus"  = 1)             ::int AS sunday_present,
+            COUNT(*) FILTER (WHERE t."AttendanceStatus"  = 1)             ::int AS tuesday_present,
+            COUNT(*) FILTER (WHERE cm."AttendanceStatus" = 1)             ::int AS cell_present,
+            (
+              SELECT COALESCE(MAX(wkc), 0)::int
+              FROM (
+                SELECT COUNT(*)::int AS wkc
+                FROM "DepartmentAttendances" da2
+                JOIN "Sunday" s2 ON da2."SundayServiceId" = s2."Id"
+                WHERE da2."DepartmentalLeaderId" = lu."Id"
+                  AND s2."SundayService" >= $1
+                GROUP BY da2."SundayServiceId"
+              ) wk_inner
+            )                                                              ::int AS max_weekly
           FROM "DepartmentAttendances" da
           JOIN "Sunday"      s  ON da."SundayServiceId"  = s."Id" AND s."SundayService" >= $1
           JOIN "Tuesday"     t  ON da."TuesdayServiceId" = t."Id"
@@ -1224,6 +1342,8 @@ router.get('/analytics/admin/overview', async (req, res) => {
           members:        r.members,
           cells:          r.cells,
           total:          r.total,
+          expected:       r.expected,
+          weekCount:      r.week_count,
           sundayPresent:  r.sunday_present,
           tuesdayPresent: r.tuesday_present,
           cellPresent:    r.cell_present,
@@ -1236,6 +1356,9 @@ router.get('/analytics/admin/overview', async (req, res) => {
           deptId:         r.dept_id,
           isActive:       r.IsActive,
           total:          r.total,
+          expected:       r.expected,
+          maxWeekly:      r.max_weekly,
+          weekCount:      r.week_count,
           sundayPresent:  r.sunday_present,
           tuesdayPresent: r.tuesday_present,
           cellPresent:    r.cell_present,

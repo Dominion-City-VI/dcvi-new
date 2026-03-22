@@ -286,10 +286,11 @@ const AdminAnalytics = () => {
             <Tooltip
               formatter={(v: number, name: string, props: { payload?: TZonePerfItem }) => {
                 const row = props.payload;
-                if (!row || !row.total) return [`${v}%`, name];
-                if (name === 'Sunday')   return [`${v}% (${row.sundayPresent}/${row.total} records)`, name];
-                if (name === 'Tuesday')  return [`${v}% (${row.tuesdayPresent}/${row.total} records)`, name];
-                if (name === 'Cell Mtg') return [`${v}% (${row.cellPresent}/${row.total} records)`, name];
+                const exp = row?.expected ?? row?.total ?? 0;
+                if (!row || !exp) return [`${v}%`, name];
+                if (name === 'Sunday')   return [`${v}% (${row.sundayPresent}/${exp} expected)`, name];
+                if (name === 'Tuesday')  return [`${v}% (${row.tuesdayPresent}/${exp} expected)`, name];
+                if (name === 'Cell Mtg') return [`${v}% (${row.cellPresent}/${exp} expected)`, name];
                 return [`${v}%`, name];
               }}
             />
@@ -312,9 +313,9 @@ const AdminAnalytics = () => {
                   <span className="font-medium">#{i+1} {z.zone}</span>
                   <span className={cn('font-bold', pctColor(z.sundayPct))}>{z.sundayPct.toFixed(1)}%</span>
                 </div>
-                {z.total > 0 && (
+                {(z.expected ?? z.total) > 0 && (
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {z.sundayPresent} present / {z.total} records — {z.cells} cells, {z.members} members
+                    {z.sundayPresent} present / {z.expected ?? z.total} expected — {z.cells} cells, {z.members} members
                   </p>
                 )}
               </div>
@@ -330,9 +331,9 @@ const AdminAnalytics = () => {
                   <span className="font-medium">{z.zone}</span>
                   <span className={cn('font-bold', pctColor(z.sundayPct))}>{z.sundayPct.toFixed(1)}%</span>
                 </div>
-                {z.total > 0 && (
+                {(z.expected ?? z.total) > 0 && (
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {z.sundayPresent} present / {z.total} records — {z.cells} cells, {z.members} members
+                    {z.sundayPresent} present / {z.expected ?? z.total} expected — {z.cells} cells, {z.members} members
                   </p>
                 )}
               </div>
@@ -352,10 +353,11 @@ const AdminAnalytics = () => {
             <Tooltip
               formatter={(v: number, name: string, props: { payload?: TDeptPerfItem }) => {
                 const row = props.payload;
-                if (!row || !row.total) return [`${v}%`, name];
-                if (name === 'Sunday')       return [`${v}% (${row.sundayPresent}/${row.total} records)`, name];
-                if (name === 'Tuesday')      return [`${v}% (${row.tuesdayPresent}/${row.total} records)`, name];
-                if (name === 'Friday (Cell)') return [`${v}% (${row.cellPresent}/${row.total} records)`, name];
+                const exp = row?.expected ?? row?.total ?? 0;
+                if (!row || !exp) return [`${v}%`, name];
+                if (name === 'Sunday')        return [`${v}% (${row.sundayPresent}/${exp} expected)`, name];
+                if (name === 'Tuesday')       return [`${v}% (${row.tuesdayPresent}/${exp} expected)`, name];
+                if (name === 'Friday (Cell)') return [`${v}% (${row.cellPresent}/${exp} expected)`, name];
                 return [`${v}%`, name];
               }}
             />
@@ -378,9 +380,9 @@ const AdminAnalytics = () => {
                   <span className="font-medium">#{i+1} {d.dept}</span>
                   <span className={cn('font-bold', pctColor(d.sundayPct))}>{d.sundayPct.toFixed(1)}%</span>
                 </div>
-                {d.total > 0 && (
+                {(d.expected ?? d.total) > 0 && (
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {d.sundayPresent} present / {d.total} records
+                    {d.sundayPresent} present / {d.expected ?? d.total} expected
                   </p>
                 )}
               </div>
@@ -396,9 +398,9 @@ const AdminAnalytics = () => {
                   <span className="font-medium">{d.dept}</span>
                   <span className={cn('font-bold', pctColor(d.sundayPct))}>{d.sundayPct.toFixed(1)}%</span>
                 </div>
-                {d.total > 0 && (
+                {(d.expected ?? d.total) > 0 && (
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {d.sundayPresent} present / {d.total} records
+                    {d.sundayPresent} present / {d.expected ?? d.total} expected
                   </p>
                 )}
               </div>

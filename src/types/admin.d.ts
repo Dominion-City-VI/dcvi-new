@@ -216,6 +216,8 @@ type TZonePerfItem = {
   members: number;
   cells: number;
   total: number;
+  expected: number;
+  weekCount: number;
   sundayPresent: number;
   tuesdayPresent: number;
   cellPresent: number;
@@ -229,6 +231,9 @@ type TDeptPerfItem = {
   deptId: string;
   isActive: boolean;
   total: number;
+  expected: number;
+  maxWeekly: number;
+  weekCount: number;
   sundayPresent: number;
   tuesdayPresent: number;
   cellPresent: number;
