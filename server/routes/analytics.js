@@ -212,7 +212,8 @@ router.get('/analytics/service-summary', async (req, res) => {
       let whereExtra = '';
 
       if (isDept && Id) {
-        whereExtra = 'AND da."DepartmentId" = $2'; params.push(Id);
+        whereExtra = `AND da."DepartmentalLeaderId" = (SELECT "DepartmentLeaderId" FROM "Departments" WHERE "Id" = $2)`;
+        params.push(Id);
       } else if (roleType === 4 && Id) {
         whereExtra = 'AND ca."ZoneId" = $2'; params.push(Id);
       } else if ((roleType === 5 || roleType === 6) && Id) {
@@ -221,14 +222,14 @@ router.get('/analytics/service-summary', async (req, res) => {
 
       const query = isDept ? `
         SELECT
-          COUNT(*)::int AS total,
-          COUNT(CASE WHEN s."AttendanceStatus" = 1 THEN 1 END)::int AS "totalSunday",
-          COUNT(CASE WHEN t."AttendanceStatus" = 1 THEN 1 END)::int AS "totalTuesday",
+          COUNT(DISTINCT da."Id")::int AS total,
+          COUNT(DISTINCT CASE WHEN s."AttendanceStatus" = 1 THEN da."Id" END)::int AS "totalSunday",
+          COUNT(DISTINCT CASE WHEN t."AttendanceStatus" = 1 THEN da."Id" END)::int AS "totalTuesday",
           0::int AS "totalCellAttendees",
-          ROUND(COUNT(CASE WHEN s."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS "totalSundayPercentage",
-          ROUND(COUNT(CASE WHEN t."AttendanceStatus" = 1 THEN 1 END)*100.0/NULLIF(COUNT(*),0),2) AS "totalTuesdayPercentage",
+          ROUND(COUNT(DISTINCT CASE WHEN s."AttendanceStatus" = 1 THEN da."Id" END)*100.0/NULLIF(COUNT(DISTINCT da."Id"),0),2) AS "totalSundayPercentage",
+          ROUND(COUNT(DISTINCT CASE WHEN t."AttendanceStatus" = 1 THEN da."Id" END)*100.0/NULLIF(COUNT(DISTINCT da."Id"),0),2) AS "totalTuesdayPercentage",
           0::numeric AS "totalCellAttendeesPercentage",
-          ROUND((COUNT(CASE WHEN s."AttendanceStatus"=1 THEN 1 END)+COUNT(CASE WHEN t."AttendanceStatus"=1 THEN 1 END))*100.0/NULLIF(COUNT(*)*2,0),2) AS "totalPercentage"
+          ROUND((COUNT(DISTINCT CASE WHEN s."AttendanceStatus"=1 THEN da."Id" END)+COUNT(DISTINCT CASE WHEN t."AttendanceStatus"=1 THEN da."Id" END))*100.0/NULLIF(COUNT(DISTINCT da."Id")*2,0),2) AS "totalPercentage"
         FROM "DepartmentAttendances" da
         JOIN "Sunday"  s ON da."SundayServiceId"  = s."Id"
         JOIN "Tuesday" t ON da."TuesdayServiceId" = t."Id"
@@ -290,7 +291,7 @@ router.get('/analytics/status-summary', async (req, res) => {
       if (isDept && Id) {
         table = '"DepartmentAttendances" da';
         joinSunday = 'JOIN "Sunday" s ON da."SundayServiceId" = s."Id"';
-        whereExtra = 'AND da."DepartmentId" = $2';
+        whereExtra = `AND da."DepartmentalLeaderId" = (SELECT "DepartmentLeaderId" FROM "Departments" WHERE "Id" = $2)`;
         params.push(Id);
       } else if (roleType === 4 && Id) {
         whereExtra = 'AND ca."ZoneId" = $2'; params.push(Id);

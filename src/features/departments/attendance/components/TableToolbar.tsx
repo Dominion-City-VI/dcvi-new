@@ -48,124 +48,101 @@ const DataTableToolbar = ({ placeholder }: DataTableToolbarProps) => {
   };
 
   return (
-    <div className="flex w-full items-center justify-between">
+    <div className="flex w-full items-start justify-between gap-2">
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="flex w-full flex-col justify-between md:flex-row md:items-center"
+          className="flex w-full flex-col gap-3"
         >
-          <fieldset className="grid w-full grid-cols-2 items-center gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="flex flex-wrap items-end gap-2">
             <FormField
               control={form.control}
               name="Search"
               render={({ field }) => (
-                <InputField
-                  label=""
-                  id="search"
-                  placeholder={placeholder}
-                  className="col-span-2 text-sm placeholder:text-sm lg:col-span-1"
-                  {...field}
-                />
+                <div className="min-w-[160px]">
+                  <InputField
+                    label=""
+                    id="search"
+                    placeholder={placeholder}
+                    className="text-sm placeholder:text-sm"
+                    {...field}
+                  />
+                </div>
               )}
             />
 
-            <div className="grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-3 lg:grid-cols-5">
-              <FormField
-                control={form.control}
-                name="Period"
-                render={({ field }) => (
-                  <Select value={field.value?.toString()} onValueChange={(value) => field.onChange(Number(value))}>
-                    <SelectTrigger className="w-36">
-                      <SelectValue placeholder="Select period" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">All</SelectItem>
-                      <SelectItem value="1">Weekly</SelectItem>
-                      <SelectItem value="2">Monthly</SelectItem>                      
-                      <SelectItem value="6">This Month</SelectItem>                      
-                      <SelectItem value="5">3 Months Ago</SelectItem>
-                       <SelectItem value="4">Quarterly</SelectItem>
-                      <SelectItem value="3">Yearly</SelectItem>                     
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="Period"
+              render={({ field }) => (
+                <Select value={field.value?.toString()} onValueChange={(value) => field.onChange(Number(value))}>
+                  <SelectTrigger className="w-36">
+                    <SelectValue placeholder="Select period" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">All</SelectItem>
+                    <SelectItem value="1">Weekly</SelectItem>
+                    <SelectItem value="2">Monthly</SelectItem>
+                    <SelectItem value="6">This Month</SelectItem>
+                    <SelectItem value="5">3 Months Ago</SelectItem>
+                    <SelectItem value="4">Quarterly</SelectItem>
+                    <SelectItem value="3">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
 
-            {/* <div className="col-span-1">
-              <FormField
-                control={form.control}
-                name="MeetingType"
-                render={({ field }) => (
-                  <Select value={field.value?.toString()} onValueChange={(value) => field.onChange(Number(value))}>
-                    <SelectTrigger className="w-36">
-                      <SelectValue placeholder="Select Meeting/Service" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">All</SelectItem>
-                      <SelectItem value="1">Cell</SelectItem>
-                      <SelectItem value="2">Tuesday</SelectItem>
-                      <SelectItem value="3">Sunday</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div> */}
-
-            <div className="col-span-1">
-              <FormField
-                control={form.control}
-                name="StartAt"
-                render={({ field }) => (
+            <FormField
+              control={form.control}
+              name="StartAt"
+              render={({ field }) => (
+                <div className="w-36">
                   <InputDate
                     label=""
-                    placeholder="Start at"
+                    placeholder="Date from"
                     granularity="day"
-                    hourCycle={12}
                     displayFormat={{ hour24: 'yyyy/MM/dd' }}
                     yearRange={2}
                     onChange={field.onChange}
                   />
-                )}
-              />
-            </div>
+                </div>
+              )}
+            />
 
-            <div className="col-span-1">
-              <FormField
-                control={form.control}
-                name="EndAt"
-                render={({ field }) => (
+            <FormField
+              control={form.control}
+              name="EndAt"
+              render={({ field }) => (
+                <div className="w-36">
                   <InputDate
                     label=""
-                    placeholder="End at"
+                    placeholder="Date to"
                     granularity="day"
-                    hourCycle={12}
                     displayFormat={{ hour24: 'yyyy/MM/dd' }}
                     yearRange={0}
                     onChange={field.onChange}
                   />
-                )}
-              />
-            </div>
-          </fieldset>
-          <br/>
-          <div className="flex justify-start space-x-2">
-            {hasFilter(attendanceQuery) && (
-              <Button
-                variant="secondary"
-                type="button"
-                onClick={handleReset}
-                className="col-span-1 h-8 px-2 lg:px-3"
-              >
-                Reset
-                <Cross2Icon className="ml-2 h-4 w-4" />
-              </Button>
-            )}
+                </div>
+              )}
+            />
 
-            <Button type="submit" className="col-span-1 h-8 px-2 lg:px-3">
-              Apply
-              <Funnel />
-            </Button>
+            <div className="flex items-center gap-2">
+              {hasFilter(attendanceQuery) && (
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={handleReset}
+                  className="h-8 px-2 lg:px-3"
+                >
+                  Reset
+                  <Cross2Icon className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+              <Button type="submit" className="h-8 px-2 lg:px-3">
+                Apply
+                <Funnel />
+              </Button>
+            </div>
           </div>
         </form>
       </Form>

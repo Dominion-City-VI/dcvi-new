@@ -71,9 +71,9 @@ function DepartmentDB() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total Members"
+          title="Attendance Records"
           value={total}
-          subtitle="Dept. roster size"
+          subtitle="Records filed this period"
           icon={Users}
           iconColor="text-primary"
           isLoading={isLoading}
