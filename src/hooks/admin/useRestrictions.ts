@@ -69,3 +69,32 @@ export const useRemoveRestriction = () => {
     }
   });
 };
+
+// ── Bulk restrict mutation ─────────────────────────────────────────────────
+export const useBulkRestrict = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: {
+      entityType: 'cell' | 'dept';
+      items: { entityId: string; entityName: string }[];
+      reason?: string;
+    }) => localServer.post('/restrictions/bulk', payload).then(r => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/restrictions'] });
+    }
+  });
+};
+
+// ── Bulk lift mutation ─────────────────────────────────────────────────────
+export const useBulkLiftRestrictions = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (entityType: 'cell' | 'dept') =>
+      localServer.delete(`/restrictions/bulk/${entityType}`).then(r => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/restrictions'] });
+    }
+  });
+};

@@ -11,14 +11,21 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter
+  DialogFooter,
+  DialogDescription
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Lock, LockOpen, Search, ShieldOff } from 'lucide-react';
 import { useFetchZonesOverview } from '@/hooks/admin/useFetchZonesOverview';
 import { useFetchDeptOverview } from '@/hooks/admin/useFetchDeptOverview';
-import { useFetchRestrictions, useAddRestriction, useRemoveRestriction } from '@/hooks/admin/useRestrictions';
+import {
+  useFetchRestrictions,
+  useAddRestriction,
+  useRemoveRestriction,
+  useBulkRestrict,
+  useBulkLiftRestrictions
+} from '@/hooks/admin/useRestrictions';
 import { cn } from '@/lib/utils';
 import { toast as _toast } from 'sonner';
 const toast = (opts: { title: string; description?: string; variant?: string }) => {
@@ -32,6 +39,7 @@ type RestrictTarget = {
   entityName: string;
 };
 
+// ── Single restrict dialog ────────────────────────────────────────────────────
 function RestrictDialog({
   target,
   onClose,
@@ -75,6 +83,96 @@ function RestrictDialog({
   );
 }
 
+// ── Bulk restrict dialog ──────────────────────────────────────────────────────
+function BulkRestrictDialog({
+  entityType,
+  count,
+  onClose,
+  onConfirm,
+  isPending
+}: {
+  entityType: 'cell' | 'dept';
+  count: number;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+  isPending: boolean;
+}) {
+  const [reason, setReason] = useState('');
+  const label = entityType === 'cell' ? 'cells' : 'departments';
+  return (
+    <Dialog open onOpenChange={v => !v && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Restrict all {label}</DialogTitle>
+          <DialogDescription>
+            This will restrict <span className="font-semibold text-foreground">{count} {label}</span> from
+            filing attendance records. Already-restricted {label} will have their reason updated.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-1">
+          <Label>Reason (optional)</Label>
+          <Textarea
+            placeholder="e.g. Data audit in progress, end-of-quarter lock…"
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            className="mt-1 resize-none"
+            rows={3}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={isPending}>Cancel</Button>
+          <Button variant="destructive" onClick={() => onConfirm(reason)} disabled={isPending}>
+            <Lock size={14} className="mr-1.5" />
+            {isPending ? 'Restricting…' : `Restrict all ${count} ${label}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Bulk lift confirmation dialog ─────────────────────────────────────────────
+function BulkLiftDialog({
+  entityType,
+  count,
+  onClose,
+  onConfirm,
+  isPending
+}: {
+  entityType: 'cell' | 'dept';
+  count: number;
+  onClose: () => void;
+  onConfirm: () => void;
+  isPending: boolean;
+}) {
+  const label = entityType === 'cell' ? 'cells' : 'departments';
+  return (
+    <Dialog open onOpenChange={v => !v && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Lift all restrictions</DialogTitle>
+          <DialogDescription>
+            This will allow all <span className="font-semibold text-foreground">{count} restricted {label}</span> to
+            file attendance records again. This cannot be undone in bulk.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={isPending}>Cancel</Button>
+          <Button
+            className="bg-green-700 hover:bg-green-800 text-white"
+            onClick={onConfirm}
+            disabled={isPending}
+          >
+            <LockOpen size={14} className="mr-1.5" />
+            {isPending ? 'Lifting…' : `Lift all ${count} restrictions`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Per-row toggle ────────────────────────────────────────────────────────────
 function RestrictionToggle({
   entityType,
   entityId,
@@ -135,7 +233,7 @@ function RestrictionToggle({
             disabled={isPending}
             onClick={handleLift}
           >
-            <LockOpen size={13} className="mr-1" /> Lift restriction
+            <LockOpen size={13} className="mr-1" /> Lift
           </Button>
         </div>
       ) : (
@@ -160,13 +258,18 @@ function RestrictionToggle({
   );
 }
 
+// ── Main page ─────────────────────────────────────────────────────────────────
 const AttendanceRestrictions = () => {
   const [cellSearch, setCellSearch] = useState('');
   const [deptSearch, setDeptSearch] = useState('');
+  const [bulkRestrictTab, setBulkRestrictTab] = useState<'cell' | 'dept' | null>(null);
+  const [bulkLiftTab, setBulkLiftTab]         = useState<'cell' | 'dept' | null>(null);
 
   const { data: zonesData, isLoading: zonesLoading } = useFetchZonesOverview('1');
   const { data: deptsData, isLoading: deptsLoading } = useFetchDeptOverview('1');
   const { data: restrictions, isLoading: restLoading } = useFetchRestrictions();
+  const bulkRestrict = useBulkRestrict();
+  const bulkLift     = useBulkLiftRestrictions();
 
   const restrictionMap = useMemo(() => {
     const m = new Map<string, TRestrictionItem>();
@@ -178,9 +281,7 @@ const AttendanceRestrictions = () => {
 
   const allCells = useMemo(() => {
     if (!zonesData) return [];
-    return zonesData.flatMap(z =>
-      z.cells.map(c => ({ ...c, zoneName: z.name }))
-    );
+    return zonesData.flatMap(z => z.cells.map(c => ({ ...c, zoneName: z.name })));
   }, [zonesData]);
 
   const filteredCells = useMemo(() => {
@@ -195,10 +296,46 @@ const AttendanceRestrictions = () => {
     return (deptsData ?? []).filter(d => d.name.toLowerCase().includes(q));
   }, [deptsData, deptSearch]);
 
-  const restrictedCells  = restrictions.filter(r => r.entity_type === 'cell').length;
-  const restrictedDepts  = restrictions.filter(r => r.entity_type === 'dept').length;
+  const restrictedCells = restrictions.filter(r => r.entity_type === 'cell').length;
+  const restrictedDepts = restrictions.filter(r => r.entity_type === 'dept').length;
 
   const isLoading = zonesLoading || deptsLoading || restLoading;
+
+  // ── Bulk handlers ──────────────────────────────────────────────────────────
+  const handleBulkRestrict = (reason: string) => {
+    const type = bulkRestrictTab!;
+    const items = type === 'cell'
+      ? filteredCells.map(c => ({ entityId: c.cellId, entityName: c.name }))
+      : filteredDepts.map(d => ({ entityId: d.departmentId, entityName: d.name }));
+
+    bulkRestrict.mutate(
+      { entityType: type, items, reason },
+      {
+        onSuccess: (data) => {
+          toast({ title: `${data.count} ${type === 'cell' ? 'cells' : 'departments'} restricted` });
+          setBulkRestrictTab(null);
+        },
+        onError: err => {
+          toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
+          setBulkRestrictTab(null);
+        }
+      }
+    );
+  };
+
+  const handleBulkLift = () => {
+    const type = bulkLiftTab!;
+    bulkLift.mutate(type, {
+      onSuccess: (data) => {
+        toast({ title: `All ${type === 'cell' ? 'cell' : 'department'} restrictions lifted`, description: `${data.count} restriction${data.count !== 1 ? 's' : ''} removed.` });
+        setBulkLiftTab(null);
+      },
+      onError: err => {
+        toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' });
+        setBulkLiftTab(null);
+      }
+    });
+  };
 
   return (
     <Main>
@@ -236,15 +373,38 @@ const AttendanceRestrictions = () => {
 
           {/* ── Cells tab ── */}
           <TabsContent value="cells">
-            <div className="relative mb-3">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search cells or zones…"
-                className="pl-8"
-                value={cellSearch}
-                onChange={e => setCellSearch(e.target.value)}
-              />
+            {/* toolbar */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search cells or zones…"
+                  className="pl-8"
+                  value={cellSearch}
+                  onChange={e => setCellSearch(e.target.value)}
+                />
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-red-700 border-red-200 hover:bg-red-50 shrink-0"
+                disabled={filteredCells.length === 0}
+                onClick={() => setBulkRestrictTab('cell')}
+              >
+                <Lock size={13} className="mr-1.5" /> Restrict All
+              </Button>
+              {restrictedCells > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-green-700 border-green-300 hover:bg-green-50 shrink-0"
+                  onClick={() => setBulkLiftTab('cell')}
+                >
+                  <LockOpen size={13} className="mr-1.5" /> Lift All
+                </Button>
+              )}
             </div>
+
             <div className="rounded-md border overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 text-muted-foreground text-xs uppercase">
@@ -312,15 +472,38 @@ const AttendanceRestrictions = () => {
 
           {/* ── Departments tab ── */}
           <TabsContent value="depts">
-            <div className="relative mb-3">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search departments…"
-                className="pl-8"
-                value={deptSearch}
-                onChange={e => setDeptSearch(e.target.value)}
-              />
+            {/* toolbar */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search departments…"
+                  className="pl-8"
+                  value={deptSearch}
+                  onChange={e => setDeptSearch(e.target.value)}
+                />
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-red-700 border-red-200 hover:bg-red-50 shrink-0"
+                disabled={filteredDepts.length === 0}
+                onClick={() => setBulkRestrictTab('dept')}
+              >
+                <Lock size={13} className="mr-1.5" /> Restrict All
+              </Button>
+              {restrictedDepts > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-green-700 border-green-300 hover:bg-green-50 shrink-0"
+                  onClick={() => setBulkLiftTab('dept')}
+                >
+                  <LockOpen size={13} className="mr-1.5" /> Lift All
+                </Button>
+              )}
             </div>
+
             <div className="rounded-md border overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 text-muted-foreground text-xs uppercase">
@@ -384,6 +567,28 @@ const AttendanceRestrictions = () => {
             </div>
           </TabsContent>
         </Tabs>
+      )}
+
+      {/* ── Bulk restrict dialog ── */}
+      {bulkRestrictTab && (
+        <BulkRestrictDialog
+          entityType={bulkRestrictTab}
+          count={bulkRestrictTab === 'cell' ? filteredCells.length : filteredDepts.length}
+          onClose={() => setBulkRestrictTab(null)}
+          onConfirm={handleBulkRestrict}
+          isPending={bulkRestrict.isPending}
+        />
+      )}
+
+      {/* ── Bulk lift dialog ── */}
+      {bulkLiftTab && (
+        <BulkLiftDialog
+          entityType={bulkLiftTab}
+          count={bulkLiftTab === 'cell' ? restrictedCells : restrictedDepts}
+          onClose={() => setBulkLiftTab(null)}
+          onConfirm={handleBulkLift}
+          isPending={bulkLift.isPending}
+        />
       )}
     </Main>
   );

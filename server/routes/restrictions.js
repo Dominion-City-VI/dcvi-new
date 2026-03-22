@@ -69,6 +69,51 @@ router.post('/', async (req, res) => {
   }
 });
 
+// ── POST /api/local/restrictions/bulk ───────────────────────────────────────
+// Restrict many entities at once.
+// Body: { entityType, items: [{entityId, entityName}], reason?, restrictedBy? }
+router.post('/bulk', async (req, res) => {
+  const { entityType, items = [], reason = '', restrictedBy = 'admin' } = req.body;
+  if (!entityType || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ ok: false, error: 'entityType and items[] are required' });
+  }
+  try {
+    const ids   = items.map(i => i.entityId);
+    const names = items.map(i => i.entityName ?? '');
+    await pool.query(
+      `INSERT INTO attendance_restrictions (entity_type, entity_id, entity_name, reason, restricted_by)
+       SELECT $1, u.id, u.name, $4, $5
+       FROM unnest($2::text[], $3::text[]) AS u(id, name)
+       ON CONFLICT (entity_type, entity_id) DO UPDATE
+         SET reason = EXCLUDED.reason, restricted_by = EXCLUDED.restricted_by,
+             entity_name = EXCLUDED.entity_name, created_at = NOW()`,
+      [entityType, ids, names, reason, restrictedBy]
+    );
+    res.json({ ok: true, count: items.length });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── DELETE /api/local/restrictions/bulk/:entityType ──────────────────────────
+// Lift ALL restrictions for a given entity type.
+// MUST be declared before /:entityType/:entityId to avoid route shadowing.
+router.delete('/bulk/:entityType', async (req, res) => {
+  const { entityType } = req.params;
+  if (!['cell', 'dept'].includes(entityType)) {
+    return res.status(400).json({ ok: false, error: 'entityType must be cell or dept' });
+  }
+  try {
+    const r = await pool.query(
+      `DELETE FROM attendance_restrictions WHERE entity_type = $1`,
+      [entityType]
+    );
+    res.json({ ok: true, count: r.rowCount });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // ── DELETE /api/local/restrictions/:entityType/:entityId ────────────────────
 router.delete('/:entityType/:entityId', async (req, res) => {
   const { entityType, entityId } = req.params;
