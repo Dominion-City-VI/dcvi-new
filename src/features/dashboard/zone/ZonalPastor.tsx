@@ -7,22 +7,13 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { PeriodNameMap, periodText, EnumRoles } from '@/constants/mangle';
+import { PeriodNameMap, periodText } from '@/constants/mangle';
 import { useFetchZoneAnalytics } from '@/hooks/zone/useFetchZoneAnalytics';
 import { useStore } from '@/store';
 import { Skeleton } from '@/components/ui/skeleton';
 import Overview from '../components/Overview';
-import { useFetchAttendanceSummaries } from '@/hooks/attendance/useFetchCellStatusSummary';
 import { StatCard } from '../components/StatCard';
-import { StatusPieChart } from '../components/StatusPieChart';
-
-const STATUS_COLORS = {
-  present: '#22c55e',
-  absent: '#ef4444',
-  sick: '#f97316',
-  traveled: '#3b82f6',
-  ncm: '#a855f7'
-};
+import { AttendanceServiceCard } from '../components/AttendanceServiceCard';
 
 function ZonalPastorDB() {
   const {
@@ -34,12 +25,6 @@ function ZonalPastorDB() {
   const { data, isLoading } = useFetchZoneAnalytics({
     id: userExtraInfo.zonalId as string,
     period: periodNum
-  });
-
-  const { statusSummary, isLoading: summaryLoading } = useFetchAttendanceSummaries({
-    id: userExtraInfo.zonalId,
-    period: periodNum,
-    roleType: EnumRoles.ZONAL_PASTOR
   });
 
   const [periodicAnalysis, setPeriodicAnalysis] = useState<Array<TPeriodicAnalysisDatapointItem>>(
@@ -59,12 +44,10 @@ function ZonalPastorDB() {
   const cellPct = perf?.cellAttendance ?? 0;
   const cellCount = data?.cellCount ?? 0;
 
-  const pieData = [
-    { name: 'Present', value: statusSummary?.totalPresent ?? 0, color: STATUS_COLORS.present },
-    { name: 'Absent', value: statusSummary?.totalAbsent ?? 0, color: STATUS_COLORS.absent },
-    { name: 'Sick', value: statusSummary?.totalSick ?? 0, color: STATUS_COLORS.sick },
-    { name: 'Traveled', value: statusSummary?.totalTravel ?? 0, color: STATUS_COLORS.traveled },
-    { name: 'Non-Church', value: statusSummary?.totalNCM ?? 0, color: STATUS_COLORS.ncm }
+  const serviceRates = [
+    { label: 'Sunday Service',  pct: sundayPct,  color: 'bg-yellow-500' },
+    { label: 'Tuesday Service', pct: tuesdayPct, color: 'bg-red-500'    },
+    { label: 'Cell Meeting',    pct: cellPct,    color: 'bg-blue-500'   }
   ];
 
   return (
@@ -128,7 +111,7 @@ function ZonalPastorDB() {
         />
       </div>
 
-      {isLoading || summaryLoading ? (
+      {isLoading ? (
         <div className="grid gap-4 md:grid-cols-3">
           <Skeleton className="col-span-2 h-[450px] rounded-xl" />
           <Skeleton className="h-[300px] rounded-xl" />
@@ -138,10 +121,10 @@ function ZonalPastorDB() {
           <div className="col-span-2">
             <Overview period={query} periodicAnalysis={periodicAnalysis} />
           </div>
-          <StatusPieChart
-            title="Zone Status"
-            description="Attendance breakdown this period"
-            data={pieData}
+          <AttendanceServiceCard
+            title="Attendance Rate"
+            description="Present members this period"
+            services={serviceRates}
           />
         </div>
       )}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, CalendarCheck, CalendarDays, Activity } from 'lucide-react';
+import { Users, CalendarCheck, CalendarDays } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -12,16 +12,7 @@ import { PeriodNameMap, periodText } from '@/constants/mangle';
 import { useStore } from '@/store';
 import { useFetchDeptAnalytics } from '@/hooks/department/useFetchDeptAnalytics';
 import { StatCard } from '../components/StatCard';
-import { StatusPieChart } from '../components/StatusPieChart';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-const STATUS_COLORS = {
-  present: '#22c55e',
-  absent: '#ef4444',
-  sick: '#f97316',
-  traveled: '#3b82f6',
-  ncm: '#a855f7'
-};
+import { AttendanceServiceCard } from '../components/AttendanceServiceCard';
 
 function DepartmentDB() {
   const {
@@ -30,7 +21,7 @@ function DepartmentDB() {
   const [query, setQuery] = useState('WEEK');
 
   const periodNum = PeriodNameMap.get(query) as number;
-  const { serviceSummary, statusSummary, isLoading } = useFetchDeptAnalytics({
+  const { serviceSummary, isLoading } = useFetchDeptAnalytics({
     departmentId: userExtraInfo.departmentId,
     period: periodNum
   });
@@ -38,17 +29,12 @@ function DepartmentDB() {
   const total = serviceSummary?.total ?? 0;
   const totalSunday = serviceSummary?.totalSunday ?? 0;
   const totalTuesday = serviceSummary?.totalTuesday ?? 0;
-  const totalCell = serviceSummary?.totalCellAttendees ?? 0;
   const sundayPct = serviceSummary?.totalSundayPercentage ?? 0;
   const tuesdayPct = serviceSummary?.totalTuesdayPercentage ?? 0;
-  const cellPct = serviceSummary?.totalCellAttendeesPercentage ?? 0;
 
-  const pieData = [
-    { name: 'Present', value: statusSummary?.totalPresent ?? 0, color: STATUS_COLORS.present },
-    { name: 'Absent', value: statusSummary?.totalAbsent ?? 0, color: STATUS_COLORS.absent },
-    { name: 'Sick', value: statusSummary?.totalSick ?? 0, color: STATUS_COLORS.sick },
-    { name: 'Traveled', value: statusSummary?.totalTravel ?? 0, color: STATUS_COLORS.traveled },
-    { name: 'Non-Church', value: statusSummary?.totalNCM ?? 0, color: STATUS_COLORS.ncm }
+  const serviceRates = [
+    { label: 'Sunday Service',  pct: sundayPct,  present: totalSunday,  total, color: 'bg-yellow-500' },
+    { label: 'Tuesday Service', pct: tuesdayPct, present: totalTuesday, total, color: 'bg-red-500'    }
   ];
 
   return (
@@ -69,99 +55,43 @@ function DepartmentDB() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
-          title="Attendance Records"
+          title="Total Records"
           value={total}
-          subtitle="Records filed this period"
+          subtitle="Attendance records this period"
           icon={Users}
           iconColor="text-primary"
           isLoading={isLoading}
         />
         <StatCard
-          title="Sunday Service"
+          title="Sunday Present"
           value={totalSunday}
           suffix={` (${sundayPct.toFixed(1)}%)`}
-          subtitle="Attendance this period"
+          subtitle="Members present on Sundays"
           icon={CalendarDays}
           iconColor="text-yellow-500"
           isLoading={isLoading}
         />
         <StatCard
-          title="Tuesday Service"
+          title="Tuesday Present"
           value={totalTuesday}
           suffix={` (${tuesdayPct.toFixed(1)}%)`}
-          subtitle="Attendance this period"
+          subtitle="Members present on Tuesdays"
           icon={CalendarCheck}
           iconColor="text-red-500"
-          isLoading={isLoading}
-        />
-        <StatCard
-          title="Cell Meeting"
-          value={totalCell}
-          suffix={` (${cellPct.toFixed(1)}%)`}
-          subtitle="Cell attendance this period"
-          icon={Activity}
-          iconColor="text-blue-500"
           isLoading={isLoading}
         />
       </div>
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          <Skeleton className="h-[300px] rounded-xl" />
-          <Skeleton className="h-[300px] rounded-xl" />
-        </div>
+        <Skeleton className="h-[220px] rounded-xl" />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          <StatusPieChart
-            title="Attendance Status"
-            description="Breakdown of member attendance statuses"
-            data={pieData}
-          />
-          <Card>
-            <CardHeader>
-              <CardTitle>Service Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-2">
-              {[
-                {
-                  label: 'Sunday Service',
-                  count: totalSunday,
-                  pct: sundayPct,
-                  color: 'bg-yellow-500'
-                },
-                {
-                  label: 'Tuesday Service',
-                  count: totalTuesday,
-                  pct: tuesdayPct,
-                  color: 'bg-red-500'
-                },
-                {
-                  label: 'Cell Meeting',
-                  count: totalCell,
-                  pct: cellPct,
-                  color: 'bg-blue-500'
-                }
-              ].map((item) => (
-                <div key={item.label} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">{item.label}</span>
-                    <span className="text-muted-foreground">
-                      {item.count} ({item.pct.toFixed(1)}%)
-                    </span>
-                  </div>
-                  <div className="bg-muted h-2 w-full rounded-full">
-                    <div
-                      className={`h-2 rounded-full ${item.color} transition-all duration-500`}
-                      style={{ width: `${Math.min(item.pct, 100)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
+        <AttendanceServiceCard
+          title="Service Attendance"
+          description="Present members out of total records filed this period"
+          services={serviceRates}
+        />
       )}
     </>
   );

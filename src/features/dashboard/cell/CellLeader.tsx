@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Users, CalendarCheck, CalendarDays, Activity } from 'lucide-react';
-import { PeriodNameMap, periodText, EnumRoles } from '@/constants/mangle';
+import { PeriodNameMap, periodText } from '@/constants/mangle';
 import { useFetchCellAnalytics } from '@/hooks/cell/useFetchCellAnalytics';
 import { useStore } from '@/store';
 import {
@@ -12,17 +12,8 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import Overview from '../components/Overview';
-import { useFetchAttendanceSummaries } from '@/hooks/attendance/useFetchCellStatusSummary';
 import { StatCard } from '../components/StatCard';
-import { StatusPieChart } from '../components/StatusPieChart';
-
-const STATUS_COLORS = {
-  present: '#22c55e',
-  absent: '#ef4444',
-  sick: '#f97316',
-  traveled: '#3b82f6',
-  ncm: '#a855f7'
-};
+import { AttendanceServiceCard } from '../components/AttendanceServiceCard';
 
 function CellLeaderDB() {
   const {
@@ -38,12 +29,6 @@ function CellLeaderDB() {
     { period: periodNum },
     cellId
   );
-
-  const { statusSummary, isLoading: summaryLoading } = useFetchAttendanceSummaries({
-    id: cellId,
-    period: periodNum,
-    roleType: EnumRoles.CELL_LEADER
-  });
 
   useEffect(() => {
     if (!isLoading && data?.performanceInPercentage) {
@@ -81,12 +66,10 @@ function CellLeaderDB() {
   const tuesdayPct = perf?.tuesdayAttendance ?? 0;
   const cellPct = perf?.cellAttendance ?? 0;
 
-  const pieData = [
-    { name: 'Present', value: statusSummary?.totalPresent ?? 0, color: STATUS_COLORS.present },
-    { name: 'Absent', value: statusSummary?.totalAbsent ?? 0, color: STATUS_COLORS.absent },
-    { name: 'Sick', value: statusSummary?.totalSick ?? 0, color: STATUS_COLORS.sick },
-    { name: 'Traveled', value: statusSummary?.totalTravel ?? 0, color: STATUS_COLORS.traveled },
-    { name: 'Non-Church', value: statusSummary?.totalNCM ?? 0, color: STATUS_COLORS.ncm }
+  const serviceRates = [
+    { label: 'Sunday Service',  pct: sundayPct,  color: 'bg-yellow-500' },
+    { label: 'Tuesday Service', pct: tuesdayPct, color: 'bg-red-500'    },
+    { label: 'Cell Meeting',    pct: cellPct,    color: 'bg-blue-500'   }
   ];
 
   return (
@@ -142,7 +125,7 @@ function CellLeaderDB() {
         />
       </div>
 
-      {isLoading || summaryLoading ? (
+      {isLoading ? (
         <div className="grid gap-4 md:grid-cols-3">
           <Skeleton className="col-span-2 h-[450px] rounded-xl" />
           <Skeleton className="h-[300px] rounded-xl" />
@@ -152,10 +135,10 @@ function CellLeaderDB() {
           <div className="col-span-2">
             <Overview period={query} periodicAnalysis={periodicAnalysis} />
           </div>
-          <StatusPieChart
-            title="Member Status"
-            description="Attendance breakdown this period"
-            data={pieData}
+          <AttendanceServiceCard
+            title="Attendance Rate"
+            description="Present members this period"
+            services={serviceRates}
           />
         </div>
       )}
