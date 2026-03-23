@@ -104,17 +104,17 @@ export const sidebarData: SidebarData = {
         {
           title: 'Manage Zone',
           icon: TableCellsMerge,
-          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR],
+          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN],
           items: [
             {
               title: 'Zone',
               url: '/admin/zones',
-              rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
+              rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN]
             },
             {
               title: 'Attendance',
               url: '/admin/zones/attendance',
-              rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
+              rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN]
             }
           ]
         },
@@ -138,7 +138,7 @@ export const sidebarData: SidebarData = {
         {
           title: 'Manage Department',
           icon: TableCellsMerge,
-          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR],
+          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN],
           items: [
             {
               title: 'Service Units',
@@ -148,9 +148,21 @@ export const sidebarData: SidebarData = {
             {
               title: 'Attendance Overview',
               url: '/admin/departments/attendance',
-              rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
+              rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN]
             }
           ]
+        },
+        {
+          icon: TableCellsMerge,
+          title: 'Attendance',
+          url: '/admin/zones/attendance',
+          rba: [EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
+        },
+        {
+          icon: TableCellsMerge,
+          title: 'Attendance Overview',
+          url: '/admin/departments/attendance',
+          rba: [EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
         },
         {
           title: 'Leaders',
