@@ -41,7 +41,8 @@ export const sidebarData: SidebarData = {
         {
           title: 'Messaging',
           icon: MessageSquare,
-          rba: [],
+          rba: [EnumRoles.CELL_LEADER, EnumRoles.ASST_CELL_LEADER, EnumRoles.ASST_DEPARTMENTAL_HEAD, 
+            EnumRoles.DEPARTMENTAL_HEAD, EnumRoles.SUB_ADMIN, EnumRoles.SUPER_ADMIN],
           items: [
             { title: 'SMS', url: '/messaging/sms', rba: [] },
             { title: 'Phone book', url: '/messaging/phone-book', rba: [] }
@@ -51,7 +52,8 @@ export const sidebarData: SidebarData = {
           title: 'Wallet',
           url: '/wallet',
           icon: Wallet2,
-          rba: []
+          rba: [EnumRoles.CELL_LEADER, EnumRoles.ASST_CELL_LEADER, EnumRoles.ASST_DEPARTMENTAL_HEAD, 
+            EnumRoles.DEPARTMENTAL_HEAD, EnumRoles.SUB_ADMIN, EnumRoles.SUPER_ADMIN]
         }
       ]
     },
@@ -79,7 +81,7 @@ export const sidebarData: SidebarData = {
         {
           title: 'Users',
           icon: Users,
-          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN],
+          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR],
           url: '/admin/users'
         },
         {
@@ -141,7 +143,7 @@ export const sidebarData: SidebarData = {
             {
               title: 'Service Units',
               url: '/admin/departments',
-              rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
+              rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN]
             },
             {
               title: 'Attendance Overview',
@@ -166,13 +168,13 @@ export const sidebarData: SidebarData = {
           title: 'Restrictions',
           icon: ShieldOff,
           url: '/admin/restrictions',
-          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
+          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN]
         },
         {
           title: 'Email',
           icon: Mail,
           url: '/admin/email',
-          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN, EnumRoles.PASTOR, EnumRoles.SENIOR_PASTOR]
+          rba: [EnumRoles.SUPER_ADMIN, EnumRoles.SUB_ADMIN]
         }
       ]
     },
