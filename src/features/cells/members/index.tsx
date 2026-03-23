@@ -7,6 +7,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { DataTable } from './components/DataTable';
 import { columns } from './components/columns';
 import { observer } from 'mobx-react-lite';
+import { Button } from '@/components/ui/button';
+import { Download } from 'lucide-react';
+import { exportCellMembersToExcel } from '@/utils/exportExcel';
 
 const Members = () => {
   const {
@@ -31,6 +34,12 @@ const Members = () => {
           <h2 className="text-2xl font-bold tracking-tight">Cell Members</h2>
           <p className="text-muted-foreground">Here's your Cell members history!</p>
         </div>
+        {cellMembers.length > 0 && (
+          <Button size="sm" variant="outline" onClick={() => exportCellMembersToExcel(cellMembers, 'Cell')}>
+            <Download className="mr-1 h-4 w-4" />
+            Export Excel
+          </Button>
+        )}
       </div>
 
       <div className="-mx-4 flex-1 overflow-auto px-4 py-1 lg:flex-row lg:space-y-0 lg:space-x-12">

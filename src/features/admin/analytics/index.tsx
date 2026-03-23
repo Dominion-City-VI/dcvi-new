@@ -5,6 +5,9 @@ import { useFetchAdminOverview } from '@/hooks/admin/useFetchAdminOverview';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Download, FileText } from 'lucide-react';
+import { exportAnalyticsToExcel } from '@/utils/exportExcel';
+import { exportAnalyticsToWord } from '@/utils/exportWord';
 import {
   AreaChart,
   Area,
@@ -126,12 +129,20 @@ const AdminAnalytics = () => {
           <h2 className="text-2xl font-bold tracking-tight">Analytics</h2>
           <p className="text-muted-foreground">Church-wide attendance and performance insights</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           {PERIODS.map(p => (
             <Button key={p.value} size="sm" variant={period === p.value ? 'default' : 'outline'} onClick={() => setPeriod(p.value)}>
               {p.label}
             </Button>
           ))}
+          <Button size="sm" variant="outline" onClick={() => exportAnalyticsToExcel(data, period)}>
+            <Download className="mr-1 h-4 w-4" />
+            Export Excel
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => exportAnalyticsToWord(data, period)}>
+            <FileText className="mr-1 h-4 w-4" />
+            Export Word
+          </Button>
         </div>
       </div>
 

@@ -8,6 +8,8 @@ import {
   DialogHeader,
   DialogFooter
 } from '@/components/ui/dialog';
+import { Download } from 'lucide-react';
+import { exportDeptMembersToExcel } from '@/utils/exportExcel';
 import { Button } from '@/components/ui/button';
 import { useStore } from '@/store';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -200,7 +202,17 @@ export default function ViewDepartmentPeopleModal() {
           </div>
         )}
 
-        <DialogFooter className="sm:justify-end">
+        <DialogFooter className="sm:justify-between">
+          {tableData.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => exportDeptMembersToExcel(tableData, title)}
+            >
+              <Download className="mr-1 h-4 w-4" />
+              Export Excel
+            </Button>
+          )}
           <DialogClose asChild>
             <Button type="button" variant="secondary">
               Close

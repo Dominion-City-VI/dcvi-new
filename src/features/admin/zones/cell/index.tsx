@@ -7,6 +7,9 @@ import { columns } from '@/features/cells/members/components/columns';
 import { observer } from 'mobx-react-lite';
 import CellMembersButtons from '@/features/cells/members/components/cellMembersButtons';
 import { Route } from '@/routes/_authenticated/admin/zones/$zoneId/$cellId';
+import { Button } from '@/components/ui/button';
+import { Download } from 'lucide-react';
+import { exportCellMembersToExcel } from '@/utils/exportExcel';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -52,7 +55,15 @@ const Cell = () => {
           <h2 className="text-2xl font-bold tracking-tight">Cell Members</h2>
           <p className="text-muted-foreground">Here's your Cell members history!</p>
         </div>
-        <CellMembersButtons />
+        <div className="flex gap-2 items-center">
+          <CellMembersButtons />
+          {cellMembers.length > 0 && (
+            <Button size="sm" variant="outline" onClick={() => exportCellMembersToExcel(cellMembers, `Cell_${cellId}`)}>
+              <Download className="mr-1 h-4 w-4" />
+              Export Excel
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="-mx-4 flex-1 overflow-auto px-4 py-1 lg:flex-row lg:space-y-0 lg:space-x-12">

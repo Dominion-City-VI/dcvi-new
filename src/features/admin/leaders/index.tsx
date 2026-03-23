@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { dateTimeUTC } from '@/utils/date';
+import { exportLeadersToExcel } from '@/utils/exportExcel';
+import { Download } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -142,12 +144,18 @@ const LeadersOverview = () => {
           <h2 className="text-2xl font-bold tracking-tight">Leaders Overview</h2>
           <p className="text-muted-foreground">Last login activity and performance KPIs for all leaders</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           {PERIODS.map(p => (
             <Button key={p.value} size="sm" variant={period === p.value ? 'default' : 'outline'} onClick={() => setPeriod(p.value)}>
               {p.label}
             </Button>
           ))}
+          {data && (
+            <Button size="sm" variant="outline" onClick={() => exportLeadersToExcel(data, period)}>
+              <Download className="mr-1 h-4 w-4" />
+              Export Excel
+            </Button>
+          )}
         </div>
       </div>
 

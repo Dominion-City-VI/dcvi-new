@@ -6,6 +6,9 @@ import { useAdminFetchUsers } from '@/hooks/admin/useAdminFetchUsers';
 import { observer } from 'mobx-react-lite';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UsersTable } from './components/UsersTable';
+import { Button } from '@/components/ui/button';
+import { Download } from 'lucide-react';
+import { exportUsersToExcel } from '@/utils/exportExcel';
 
 const Users = () => {
   const {
@@ -31,6 +34,12 @@ const Users = () => {
           <h2 className="text-2xl font-bold tracking-tight">All users</h2>
           <p className="text-muted-foreground">Here's your user history!</p>
         </div>
+        {users.items.length > 0 && (
+          <Button size="sm" variant="outline" onClick={() => exportUsersToExcel(users.items)}>
+            <Download className="mr-1 h-4 w-4" />
+            Export Excel
+          </Button>
+        )}
       </div>
 
       <div className="-mx-4 flex-1 overflow-auto px-4 py-1 lg:flex-row lg:space-y-0 lg:space-x-12">
